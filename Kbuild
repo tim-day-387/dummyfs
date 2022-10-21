@@ -1,1 +1,1 @@
-obj-m := ./vvsfs/vvsfs.o
+obj-m := ./dummyfs/dummyfs.o

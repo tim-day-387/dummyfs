@@ -3,60 +3,60 @@
  * (based on the simplistic RAM filesystem McCreath 2001)
  *
  * This code pertains to the manipulation of VFS inodes and
- * reflecting VFS data back to a vvsfs disk.
+ * reflecting VFS data back to a dummyfs disk.
  */
 
 #include "block.c"
 
-static struct inode_operations vvsfs_file_inode_operations;
-static struct file_operations vvsfs_file_operations;
-static struct inode_operations vvsfs_dir_inode_operations;
-static struct file_operations vvsfs_dir_operations;
-static struct super_operations vvsfs_ops;
+static struct inode_operations dummyfs_file_inode_operations;
+static struct file_operations dummyfs_file_operations;
+static struct inode_operations dummyfs_dir_inode_operations;
+static struct file_operations dummyfs_dir_operations;
+static struct super_operations dummyfs_ops;
 
-struct inode *vvsfs_iget(struct super_block *sb, unsigned long ino);
+struct inode *dummyfs_iget(struct super_block *sb, unsigned long ino);
 
 /*
  * Create an inode in a directory.
  *
  * Returns 0 on success.
  */
-static int vvsfs_create(struct inode *dir,
+static int dummyfs_create(struct inode *dir,
                         struct dentry* dentry,
                         umode_t mode,
                         unsigned short inode_mode)
 {
-        struct vvsfs_inode dir_data;
+        struct dummyfs_inode dir_data;
         int num_listings;
-        struct vvsfs_dir_listing *listing;
+        struct dummyfs_dir_listing *listing;
         struct inode *inode;
 	unsigned char *listings;
 
         if (DEBUG)
-                printk("vvsfs - create : %s\n",dentry->d_name.name);
+                printk("dummyfs - create : %s\n",dentry->d_name.name);
 
 	// Establish a default 644 mode if one wasn't given
 	if (!mode)
 		mode = S_IRUGO | S_IWUGO;
 
 	/*
-	 * Create a vvsfs inode on disk and instantiate a corresponding
+	 * Create a dummyfs inode on disk and instantiate a corresponding
 	 * VFS inode, making sure to create the right kind (dir or
 	 * regular file) and assign the right VFS inode operations to it
 	 */
 	if (IM_IS_DIR(inode_mode))
-		inode = vvsfs_new_inode(dir, mode|S_IFDIR, inode_mode);
+		inode = dummyfs_new_inode(dir, mode|S_IFDIR, inode_mode);
 	else
-		inode = vvsfs_new_inode(dir, mode|S_IFREG, inode_mode);
+		inode = dummyfs_new_inode(dir, mode|S_IFREG, inode_mode);
         if (!inode)
                 return -ENOSPC;
 	if (IM_IS_DIR(inode_mode)) {
-		inode->i_op = &vvsfs_dir_inode_operations;
-		inode->i_fop = &vvsfs_dir_operations;
+		inode->i_op = &dummyfs_dir_inode_operations;
+		inode->i_fop = &dummyfs_dir_operations;
 		inode->i_mode = mode|S_IFDIR;
 	} else {
-		inode->i_op = &vvsfs_file_inode_operations;
-		inode->i_fop = &vvsfs_file_operations;
+		inode->i_op = &dummyfs_file_inode_operations;
+		inode->i_fop = &dummyfs_file_operations;
 		inode->i_mode = mode;
 	}
 
@@ -65,28 +65,28 @@ static int vvsfs_create(struct inode *dir,
                 return -1;
 	
 	/*
-	 * vvsfs stores dentries as a dir_listing, which is just a name/inode number
+	 * dummyfs stores dentries as a dir_listing, which is just a name/inode number
 	 * pair. These listings make up a directory's data.
 	 * To add a new one, we'll need to map the directory's existing data (listings)
 	 * into memory, and append a new name/inode number pair onto the end.
 	 */
-        vvsfs_read_inode(dir->i_sb,dir->i_ino,&dir_data); 
-        num_listings = dir_data.i_size/sizeof(struct vvsfs_dir_listing);
-	listings = vvsfs_map_data(dir->i_sb, &dir_data, sizeof(struct vvsfs_dir_listing));
-        listing = (struct vvsfs_dir_listing *) (listings +
-                (num_listings*sizeof(struct vvsfs_dir_listing)));
+        dummyfs_read_inode(dir->i_sb,dir->i_ino,&dir_data); 
+        num_listings = dir_data.i_size/sizeof(struct dummyfs_dir_listing);
+	listings = dummyfs_map_data(dir->i_sb, &dir_data, sizeof(struct dummyfs_dir_listing));
+        listing = (struct dummyfs_dir_listing *) (listings +
+                (num_listings*sizeof(struct dummyfs_dir_listing)));
 
 	/*
 	 * Append the new name/inode number pair onto the end of the listings data,
-	 * and write the vvsfs inode + data blocks back out to disk
+	 * and write the dummyfs inode + data blocks back out to disk
 	 */
         strncpy(listing->l_name, dentry->d_name.name,dentry->d_name.len);
         listing->l_name[dentry->d_name.len] = '\0';
         listing->l_ino = inode->i_ino;
-	vvsfs_write_data(dir->i_sb, 
+	dummyfs_write_data(dir->i_sb, 
 			 &dir_data,
 			 listings, 
-			 (num_listings + 1) * sizeof(struct vvsfs_dir_listing));
+			 (num_listings + 1) * sizeof(struct dummyfs_dir_listing));
 
 	// Update the directory's VFS inode and clean up
 	dir->i_size = dir_data.i_size;
@@ -105,13 +105,13 @@ static int vvsfs_create(struct inode *dir,
  *
  * Works by reading in an inode and appending a series
  * of bytes (from userspace) to its data field.  */
-static ssize_t vvsfs_file_write(struct file *filp,
+static ssize_t dummyfs_file_write(struct file *filp,
                                 const char *buf,
                                 size_t count,
                                 loff_t *ppos)
 {
 
-        struct vvsfs_inode file_data;// dir_data;
+        struct dummyfs_inode file_data;// dir_data;
         struct inode *inode = filp->f_path.dentry->d_inode;
 	unsigned char *data;
 	//struct inode * dir = filp->f_path.dentry->d_parent->d_inode;
@@ -120,28 +120,28 @@ static ssize_t vvsfs_file_write(struct file *filp,
         struct super_block *sb;
 
         if (DEBUG)
-                printk("vvsfs - file write - count : %zu ppos %Ld\n", count,*ppos);
+                printk("dummyfs - file write - count : %zu ppos %Ld\n", count,*ppos);
 
 	/*
 	 * These error checks ensure no shenanigans (writing beyond the end/beginning of 
 	 * a file, writing directly to a directory's data, et cetera) are about to happen.
 	 */
         if (!inode) {
-                printk("vvsfs - Problem with file inode\n");
+                printk("dummyfs - Problem with file inode\n");
                 return -EINVAL;
         }
         if (!(S_ISREG(inode->i_mode))) {
-                printk("vvsfs - not regular file\n");
+                printk("dummyfs - not regular file\n");
                 return -EINVAL;
         }
         if (*ppos > inode->i_size || count <= 0) {
-                printk("vvsfs - attempting to write over the end of a file.\n");
+                printk("dummyfs - attempting to write over the end of a file.\n");
                 return 0;
         }
 
 	// Read the inode block in
         sb = inode->i_sb;
-        vvsfs_read_inode(sb,inode->i_ino,&file_data);
+        dummyfs_read_inode(sb,inode->i_ino,&file_data);
 
 	// If we're appending, move our start position to the end of the file
         if (filp->f_flags & O_APPEND)
@@ -159,21 +159,21 @@ static ssize_t vvsfs_file_write(struct file *filp,
 		    : ((pos+count)-file_data.i_size);
 
 	// Map the file data to memory and copy the data from userspace to that memory
-	data = vvsfs_map_data(sb, &file_data, extra);
+	data = dummyfs_map_data(sb, &file_data, extra);
         if (copy_from_user(data+pos,buf,count)) // Append to the file
                 return -ENOSPC;
         *ppos = pos;
         buf += count;
 
 	// Write the inode + data blocks back out to the device
-	vvsfs_write_data(sb, &file_data, data, file_data.i_size + extra);
+	dummyfs_write_data(sb, &file_data, data, file_data.i_size + extra);
         inode->i_size = file_data.i_size;
 	mark_inode_dirty(inode);
 
 	vfree(data); // Free the data from memory
 
         if (DEBUG)
-                printk("vvsfs - file write done : %zu ppos %Ld\n",count,*ppos);
+                printk("dummyfs - file write done : %zu ppos %Ld\n",count,*ppos);
 
         return count;
 }
@@ -183,45 +183,45 @@ static ssize_t vvsfs_file_write(struct file *filp,
  *
  * Returns the size of the read.
  */
-static ssize_t vvsfs_file_read(struct file *filp,
+static ssize_t dummyfs_file_read(struct file *filp,
                                char *buf,
                                size_t count,
                                loff_t *ppos)
 {
 
-	struct vvsfs_inode file_data;
+	struct dummyfs_inode file_data;
 	struct inode *inode = filp->f_path.dentry->d_inode;
 	unsigned char *data;
 	ssize_t offset, size;
 	struct super_block *sb;
 
 	if (DEBUG)
-		printk("vvsfs - file read - count : %zu ppos %Ld\n",count,*ppos);
+		printk("dummyfs - file read - count : %zu ppos %Ld\n",count,*ppos);
 
 	/*
 	 * These error checks ensure no shenanigans (reading beyond the end/beginning of 
 	 * a file, reading a directory's data directly, et cetera) are about to happen.
 	 */
 	if (!inode) {
-		printk("vvsfs - Problem with file inode\n");
+		printk("dummyfs - Problem with file inode\n");
 		return -EINVAL;
 	}
 
 	if (!(S_ISREG(inode->i_mode))) {
-		printk("vvsfs - not regular file\n");
+		printk("dummyfs - not regular file\n");
 		return -EINVAL;
 	}
 	if (*ppos > inode->i_size || count <= 0) {
-		printk("vvsfs - attempting to read beyond the start/end of a file.\n");
+		printk("dummyfs - attempting to read beyond the start/end of a file.\n");
 		return 0;
 	}
 
 
-	// Map the data to memory (refer to vvsfs_file_write for an explanation of how vvsfs
+	// Map the data to memory (refer to dummyfs_file_write for an explanation of how dummyfs
 	// stores data as linked lists)
 	sb = inode->i_sb;
-	vvsfs_read_inode(sb, inode->i_ino, &file_data);
-	data = vvsfs_map_data(sb, &file_data, 0);
+	dummyfs_read_inode(sb, inode->i_ino, &file_data);
+	data = dummyfs_map_data(sb, &file_data, 0);
 
 	size = MIN(inode->i_size - *ppos, count); // Ensure we only read up to end of file, not past it
 
@@ -229,7 +229,7 @@ static ssize_t vvsfs_file_read(struct file *filp,
 	*ppos += size;
 
 	if (DEBUG)
-		printk("vvsfs - copying %u bytes to userspace, and size is %ld\n", file_data.i_size, size);
+		printk("dummyfs - copying %u bytes to userspace, and size is %ld\n", file_data.i_size, size);
 
 	// Copy the data from memory to userspace
 	if (copy_to_user(buf,data + offset,size))
@@ -238,7 +238,7 @@ static ssize_t vvsfs_file_read(struct file *filp,
 
 	vfree(data); // Free the data from memory
 
-	printk("vvsfs - done file read\n");
+	printk("dummyfs - done file read\n");
 	return size;
 }
 
@@ -248,28 +248,28 @@ static ssize_t vvsfs_file_read(struct file *filp,
  *
  * Returns 0 on success.
  */
-static int vvsfs_unlink(struct inode *dir, struct dentry *dentry)
+static int dummyfs_unlink(struct inode *dir, struct dentry *dentry)
 {
 
 	int num_listings, k, l;
-        struct vvsfs_inode dir_data;
+        struct dummyfs_inode dir_data;
 	unsigned long file_data_index;
         struct inode *inode;
 	unsigned char *listings;
-        struct vvsfs_dir_listing *listing, *last_listing;
+        struct dummyfs_dir_listing *listing, *last_listing;
 
         if (DEBUG)
-                printk("vvsfs - unlink %s\n", dentry->d_name.name);
+                printk("dummyfs - unlink %s\n", dentry->d_name.name);
 
 	// Retrieve the parent directory's inode metadata and listings
-        vvsfs_read_inode(dir->i_sb,dir->i_ino,&dir_data);
-        num_listings = dir_data.i_size/sizeof(struct vvsfs_dir_listing); // Get an upper bounds for the later linear search
-	listings = vvsfs_map_data(dir->i_sb, &dir_data, 0);
+        dummyfs_read_inode(dir->i_sb,dir->i_ino,&dir_data);
+        num_listings = dir_data.i_size/sizeof(struct dummyfs_dir_listing); // Get an upper bounds for the later linear search
+	listings = dummyfs_map_data(dir->i_sb, &dir_data, 0);
 
 	// Find the listing in the parent directory's data and delete it
 	// Search through the parent directory's listings for the one we're trying to remove
         for (k = 0; k < num_listings; k++) {
-                listing = (struct vvsfs_dir_listing *) ((listings) + k*sizeof(struct vvsfs_dir_listing));
+                listing = (struct dummyfs_dir_listing *) ((listings) + k*sizeof(struct dummyfs_dir_listing));
 
 		// Check for a match
                 if ((strlen(listing->l_name) == dentry->d_name.len) &&
@@ -278,7 +278,7 @@ static int vvsfs_unlink(struct inode *dir, struct dentry *dentry)
 			// Replace this listing with the last listing (zero out data first)
 			for (l = 0; l < MAX_NAME_SIZE; l++)
 				listing->l_name[l] = 0;
-			last_listing = (struct vvsfs_dir_listing *) ((listings) + (num_listings-1)*sizeof(struct vvsfs_dir_listing));
+			last_listing = (struct dummyfs_dir_listing *) ((listings) + (num_listings-1)*sizeof(struct dummyfs_dir_listing));
 			strncpy(listing->l_name, last_listing->l_name, strlen(last_listing->l_name));
 			listing->l_ino = last_listing->l_ino;
 
@@ -295,24 +295,24 @@ static int vvsfs_unlink(struct inode *dir, struct dentry *dentry)
         }
 
 	// Write out the truncated directory listings to disk (and shrink the directory's size)
-	vvsfs_write_data(dir->i_sb, &dir_data, listings, (num_listings*sizeof(struct vvsfs_dir_listing)));
-	dir_data.i_size = dir_data.i_size - sizeof(struct vvsfs_dir_listing);
-	vvsfs_write_inode(dir->i_sb, dir->i_ino, &dir_data);
+	dummyfs_write_data(dir->i_sb, &dir_data, listings, (num_listings*sizeof(struct dummyfs_dir_listing)));
+	dir_data.i_size = dir_data.i_size - sizeof(struct dummyfs_dir_listing);
+	dummyfs_write_inode(dir->i_sb, dir->i_ino, &dir_data);
 
 	// Retrieve the VFS inode so we can check how many links it has left
 	inode = dentry->d_inode;
 	if (!inode) {
-		printk("vvsfs - your dentry has no inode attached, can't perform disk removal!");
-		printk("vvsfs - you may now an orphaned inode in the VFS and on disk that you can't access");
+		printk("dummyfs - your dentry has no inode attached, can't perform disk removal!");
+		printk("dummyfs - you may now an orphaned inode in the VFS and on disk that you can't access");
 		return -EACCES;
 	}
 
 	// Remove inode and data blocks from superblock if the last link is gone
 	if (inode->i_nlink == 1) {
 		if (DEBUG)
-			printk("vvsfs - inode has no links left: emptying out inode on disk");
-		file_data_index = vvsfs_inode_block_index(dir->i_sb, inode->i_ino, BM_UNALLOCATED); // Remove the inode table entry
-		vvsfs_dealloc_data(dir->i_sb, file_data_index); // Deallocate data blocks
+			printk("dummyfs - inode has no links left: emptying out inode on disk");
+		file_data_index = dummyfs_inode_block_index(dir->i_sb, inode->i_ino, BM_UNALLOCATED); // Remove the inode table entry
+		dummyfs_dealloc_data(dir->i_sb, file_data_index); // Deallocate data blocks
 	}
 
 	// Update the VFS file inode
@@ -332,28 +332,28 @@ static int vvsfs_unlink(struct inode *dir, struct dentry *dentry)
  *
  * Returns 0 on success.
  */
-static int vvsfs_rmdir(struct inode *dir, struct dentry *dentry)
+static int dummyfs_rmdir(struct inode *dir, struct dentry *dentry)
 {
-        struct vvsfs_inode dir_data;
+        struct dummyfs_inode dir_data;
         struct inode *del = dentry->d_inode;
 	int num_dirs;
 
 	if (DEBUG)
-		printk("vvsfs - rmdir %s", dentry->d_name.name);
+		printk("dummyfs - rmdir %s", dentry->d_name.name);
 
-	vvsfs_read_inode(dir->i_sb, del->i_ino, &dir_data);
-        num_dirs = dir_data.i_size/sizeof(struct vvsfs_dir_listing);
+	dummyfs_read_inode(dir->i_sb, del->i_ino, &dir_data);
+        num_dirs = dir_data.i_size/sizeof(struct dummyfs_dir_listing);
         if (num_dirs == 0) {
-                vvsfs_unlink(dir, dentry);
+                dummyfs_unlink(dir, dentry);
         } else {
-                printk("vvsfs - cannot unlink directory, has %d files\n", num_dirs);
+                printk("dummyfs - cannot unlink directory, has %d files\n", num_dirs);
 		if (DEBUG)
-			printk("vvsfs - done rmdir");
+			printk("dummyfs - done rmdir");
                 return -ENOTEMPTY;
         }
 
 	if (DEBUG)
-		printk("vvsfs - done rmdir");
+		printk("dummyfs - done rmdir");
         return 0;
 }
 
@@ -362,23 +362,23 @@ static int vvsfs_rmdir(struct inode *dir, struct dentry *dentry)
  *
  * Returns 0 on success.
  */
-static int vvsfs_readdir(struct file *filp, struct dir_context *ctx)
+static int dummyfs_readdir(struct file *filp, struct dir_context *ctx)
 {
         struct inode *inode;
-        struct vvsfs_inode dir_data;
+        struct dummyfs_inode dir_data;
 	unsigned char *listings;
         int num_listings;
-        struct vvsfs_dir_listing *listing; // Points to the current name/inode pair (dentry)
+        struct dummyfs_dir_listing *listing; // Points to the current name/inode pair (dentry)
         int error, k;
 
         if (DEBUG)
-	        printk("vvsfs - readdir\n");
+	        printk("dummyfs - readdir\n");
 
 	// Map the directory's listings into memory
         inode = file_inode(filp);
-	vvsfs_read_inode(inode->i_sb, inode->i_ino, &dir_data);
-        num_listings = dir_data.i_size / sizeof(struct vvsfs_dir_listing);
-	listings = vvsfs_map_data(inode->i_sb, &dir_data, 0);
+	dummyfs_read_inode(inode->i_sb, inode->i_ino, &dir_data);
+        num_listings = dir_data.i_size / sizeof(struct dummyfs_dir_listing);
+	listings = dummyfs_map_data(inode->i_sb, &dir_data, 0);
 
         if (DEBUG)
                 printk("Number of entries %d fpos %Ld\n", num_listings, filp->f_pos);
@@ -386,7 +386,7 @@ static int vvsfs_readdir(struct file *filp, struct dir_context *ctx)
 	// Loop through each listing and emit it
         error = 0;
         k=0;
-        listing = (struct vvsfs_dir_listing *) listings;
+        listing = (struct dummyfs_dir_listing *) listings;
         while (!error && filp->f_pos < dir_data.i_size && k < num_listings) {
                 printk("adding name : %s ino : %d\n",listing->l_name, listing->l_ino);
 
@@ -397,7 +397,7 @@ static int vvsfs_readdir(struct file *filp, struct dir_context *ctx)
 				      listing->l_ino, DT_UNKNOWN))
 				return 0;
                 }
-                ctx->pos += sizeof(struct vvsfs_dir_listing); // Move to the next listing
+                ctx->pos += sizeof(struct dummyfs_dir_listing); // Move to the next listing
 
                 k++;
                 listing++;
@@ -405,7 +405,7 @@ static int vvsfs_readdir(struct file *filp, struct dir_context *ctx)
 	
         // update_atime(i);
 	vfree(listings); // Free the listings from memory
-        printk("vvsfs - done readdir\n");
+        printk("dummyfs - done readdir\n");
 
         return 0;
 }
@@ -415,18 +415,18 @@ static int vvsfs_readdir(struct file *filp, struct dir_context *ctx)
  *
  * Returns 0 on success.
  */
-static int vvsfs_link(struct dentry *old_dentry,
+static int dummyfs_link(struct dentry *old_dentry,
                       struct inode *dir,
                       struct dentry *dentry)
 {
-        struct vvsfs_inode data;
+        struct dummyfs_inode data;
         int num_listings;
-        struct vvsfs_dir_listing *listing;
+        struct dummyfs_dir_listing *listing;
         struct inode *inode;
 	unsigned char *listings;
 
         if (DEBUG)
-                printk("vvsfs - link : %s\n",dentry->d_name.name);
+                printk("dummyfs - link : %s\n",dentry->d_name.name);
 
         // Get the existing inode
         inode = d_inode(old_dentry);
@@ -441,20 +441,20 @@ static int vvsfs_link(struct dentry *old_dentry,
 	
 
 	// Get the directory's listings
-        vvsfs_read_inode(dir->i_sb,dir->i_ino,&data);
-        num_listings = data.i_size/sizeof(struct vvsfs_dir_listing);
-	listings = vvsfs_map_data(dir->i_sb, &data, sizeof(struct vvsfs_dir_listing));
-        listing = (struct vvsfs_dir_listing *) (listings +
-                (num_listings*sizeof(struct vvsfs_dir_listing)));
+        dummyfs_read_inode(dir->i_sb,dir->i_ino,&data);
+        num_listings = data.i_size/sizeof(struct dummyfs_dir_listing);
+	listings = dummyfs_map_data(dir->i_sb, &data, sizeof(struct dummyfs_dir_listing));
+        listing = (struct dummyfs_dir_listing *) (listings +
+                (num_listings*sizeof(struct dummyfs_dir_listing)));
 
 	// Append a new listing with the same inode as the inode we retrieved earlier
         strncpy(listing->l_name, dentry->d_name.name,dentry->d_name.len);
         listing->l_name[dentry->d_name.len] = '\0';
         listing->l_ino = inode->i_ino;
-	vvsfs_write_data(dir->i_sb, 
+	dummyfs_write_data(dir->i_sb, 
 			 &data,
 			 listings, 
-			 (num_listings + 1) * sizeof(struct vvsfs_dir_listing));
+			 (num_listings + 1) * sizeof(struct dummyfs_dir_listing));
 	dir->i_size = data.i_size;
 
 	// Update the VFS parent directory
@@ -462,9 +462,9 @@ static int vvsfs_link(struct dentry *old_dentry,
 	vfree(listings);
 	
 	// Increment the inode block's links field
-	vvsfs_read_inode(dir->i_sb, inode->i_ino, &data);
+	dummyfs_read_inode(dir->i_sb, inode->i_ino, &data);
 	data.i_links++;
-	vvsfs_write_inode(dir->i_sb, inode->i_ino, &data);
+	dummyfs_write_inode(dir->i_sb, inode->i_ino, &data);
 
 	// Update the VFS inode and couple it to the new dentry
         inode_inc_link_count(inode);
@@ -483,37 +483,37 @@ static int vvsfs_link(struct dentry *old_dentry,
  * Returns NULL on success (the dentry is stored in the
  * dentry struct passed as a parameter).
  */
-static struct dentry *vvsfs_lookup(struct inode *dir,
+static struct dentry *dummyfs_lookup(struct inode *dir,
                                    struct dentry *dentry,
                                    unsigned int flags)
 {
         int num_listings, k;
-        struct vvsfs_inode dir_data;
+        struct dummyfs_inode dir_data;
         struct inode *inode = NULL;
 	unsigned char *listings;
-        struct vvsfs_dir_listing *listing;
+        struct dummyfs_dir_listing *listing;
 
         if (DEBUG)
-                printk("vvsfs - lookup in dir with ino %lu\n", dir->i_ino);
+                printk("dummyfs - lookup in dir with ino %lu\n", dir->i_ino);
 
 
 	// Map the directory's listings to memory
-	vvsfs_read_inode(dir->i_sb, dir->i_ino, &dir_data);
-        num_listings = dir_data.i_size/sizeof(struct vvsfs_dir_listing);
-	listings = vvsfs_map_data(dir->i_sb, &dir_data, 0);
+	dummyfs_read_inode(dir->i_sb, dir->i_ino, &dir_data);
+        num_listings = dir_data.i_size/sizeof(struct dummyfs_dir_listing);
+	listings = dummyfs_map_data(dir->i_sb, &dir_data, 0);
 
 	/*
 	 * Loop through listings until a match is found between the name in the
 	 * pair and the name of the file we're trying to find.
 	 */
         for (k = 0; k < num_listings; k++) {
-                listing = (struct vvsfs_dir_listing *)
-			   ((listings) + k*sizeof(struct vvsfs_dir_listing));
+                listing = (struct dummyfs_dir_listing *)
+			   ((listings) + k*sizeof(struct dummyfs_dir_listing));
 
                 if ((strlen(listing->l_name) == dentry->d_name.len) &&
                     strncmp(listing->l_name,dentry->d_name.name,dentry->d_name.len) == 0) {
 
-                        inode = vvsfs_iget(dir->i_sb, listing->l_ino); // Create a VFS inode from the disk data
+                        inode = dummyfs_iget(dir->i_sb, listing->l_ino); // Create a VFS inode from the disk data
                         if (!inode)
                                 return ERR_PTR(-EACCES);
 
@@ -526,50 +526,50 @@ static struct dentry *vvsfs_lookup(struct inode *dir,
 	vfree(listings); // Free the listings from memory
 
 	if (DEBUG)
-		printk("vvsfs - done lookup");
+		printk("dummyfs - done lookup");
 
         return NULL;
 }
 
 /*
  * Create a file in a directory. Just a wrapper to
- * vvsfs_create that specifies the inode is a file.
+ * dummyfs_create that specifies the inode is a file.
  *
  * Returns 0 on success.
  */
-static int vvsfs_file_create(struct inode *dir,
+static int dummyfs_file_create(struct inode *dir,
 		             struct dentry *dentry,
 			     umode_t mode,
 			     bool excl)
 {
-	return vvsfs_create(dir, dentry, mode, IM_REG);
+	return dummyfs_create(dir, dentry, mode, IM_REG);
 }
 
 /*
  * Create a directory in a directory. Just a wrapper to
- * vvsfs_create that specifies the inode is a directory.
+ * dummyfs_create that specifies the inode is a directory.
  *
  * Returns 0 on success.
  */
-static int vvsfs_mkdir(struct inode *dir,
+static int dummyfs_mkdir(struct inode *dir,
 		       struct dentry *dentry,
 		       umode_t mode)
 {
-	return vvsfs_create(dir, dentry, mode, IM_DIR);
+	return dummyfs_create(dir, dentry, mode, IM_DIR);
 }
 
 /*
- * Instantiate a VFS inode from on-disk vvsfs data.
+ * Instantiate a VFS inode from on-disk dummyfs data.
  *
  * Returns the inode on success.
  */
-struct inode *vvsfs_iget(struct super_block *sb, unsigned long ino)
+struct inode *dummyfs_iget(struct super_block *sb, unsigned long ino)
 {
 	struct inode *inode;
-	struct vvsfs_inode v_inode;
+	struct dummyfs_inode v_inode;
 
 	if (DEBUG) {
-		printk("vvsfs - iget - ino : %lu", ino);
+		printk("dummyfs - iget - ino : %lu", ino);
 		printk(" super %p\n", sb);
 	}
 
@@ -580,7 +580,7 @@ struct inode *vvsfs_iget(struct super_block *sb, unsigned long ino)
 		return inode;
 
 	// Read the inode block in
-	vvsfs_read_inode(inode->i_sb,inode->i_ino, &v_inode);
+	dummyfs_read_inode(inode->i_sb,inode->i_ino, &v_inode);
 
 	// Populate the VFS inode's fields
 	inode->i_size = v_inode.i_size;
@@ -591,13 +591,13 @@ struct inode *vvsfs_iget(struct super_block *sb, unsigned long ino)
 	// Assign the correct inode operations
 	if (IM_IS_DIR(v_inode.i_kind)) {
 		inode->i_mode = v_inode.i_mode|S_IFDIR;
-		inode->i_op = &vvsfs_dir_inode_operations;
-		inode->i_fop = &vvsfs_dir_operations;
+		inode->i_op = &dummyfs_dir_inode_operations;
+		inode->i_fop = &dummyfs_dir_operations;
 	}
 	else {
 		inode->i_mode = v_inode.i_mode|S_IFREG;
-		inode->i_op = &vvsfs_file_inode_operations;
-		inode->i_fop = &vvsfs_file_operations;
+		inode->i_op = &dummyfs_file_inode_operations;
+		inode->i_fop = &dummyfs_file_operations;
 	}
 
 	unlock_new_inode(inode);
@@ -605,29 +605,29 @@ struct inode *vvsfs_iget(struct super_block *sb, unsigned long ino)
 }
 
 /*
- * Create a VFS superblock from on-disk vvsfs data.
+ * Create a VFS superblock from on-disk dummyfs data.
  * This is a pretty simple function that just makes the root directory a
- * regular ol' inode to the VFS. The superblock for vvsfs is very minimal.
+ * regular ol' inode to the VFS. The superblock for dummyfs is very minimal.
  *
  * Returns 0 on success.
  */
-static int vvsfs_fill_super(struct super_block *s, void *data, int silent)
+static int dummyfs_fill_super(struct super_block *s, void *data, int silent)
 {
 	struct inode *i;
-	struct vvsfs_inode inode;
-	//struct vvsfs_inode_table table;
+	struct dummyfs_inode inode;
+	//struct dummyfs_inode_table table;
 	int hblock;
 	//int *numblocks = malloc(sizeof(int));
 
 	if (DEBUG)
-		printk("vvsfs - fill super\n");
+		printk("dummyfs - fill super\n");
 
 	#if LINUX_VERSION_CODE < KERNEL_VERSION(5,0,0)
 	s->s_flags = MS_NOSUID | MS_NOEXEC;
 	#else
 	s->s_flags = ST_NOSUID | SB_NOEXEC;
 	#endif
-	s->s_op = &vvsfs_ops;
+	s->s_op = &dummyfs_ops;
 
 	i = new_inode(s);
 
@@ -635,8 +635,8 @@ static int vvsfs_fill_super(struct super_block *s, void *data, int silent)
 	i->i_ino = 0;
 	i->i_flags = 0;
 	i->i_mode = S_IRUGO|S_IWUGO|S_IXUGO|S_IFDIR;
-	i->i_op = &vvsfs_dir_inode_operations;
-	i->i_fop = &vvsfs_dir_operations;
+	i->i_op = &dummyfs_dir_inode_operations;
+	i->i_fop = &dummyfs_dir_operations;
 	printk("inode number %lu at %p\n", i->i_ino, i);
 
 
@@ -651,7 +651,7 @@ static int vvsfs_fill_super(struct super_block *s, void *data, int silent)
 	s->s_blocksize_bits = BLOCKSIZE_BITS;
 	s->s_root = d_make_root(i);
 
-	vvsfs_readblock(s, ROOT_DIR_BLOCK_INDEX, (struct vvsfs_block *) &inode);
+	dummyfs_readblock(s, ROOT_DIR_BLOCK_INDEX, (struct dummyfs_block *) &inode);
 	i->i_size = inode.i_size;
 
 	return 0;

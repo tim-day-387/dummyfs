@@ -1,9 +1,9 @@
 /*
- *  mkfs.vvsfs - constructs an initial empty file system
+ *  mkfs.dummyfs - constructs an initial empty file system
  * Eric McCreath 2006 GPL
  *
  * To compile :
- *     gcc mkfs.vvsfs.c -o mkfs.vvsfs
+ *     gcc mkfs.dummyfs.c -o mkfs.dummyfs
  */
 
 #include <stdio.h>
@@ -12,7 +12,7 @@
 #include <sys/types.h>
 #include <unistd.h>
 
-#include "../vvsfs/vvsfs.h"
+#include "../dummyfs/dummyfs.h"
 
 char* device_name;
 int device;
@@ -25,7 +25,7 @@ static void die(char *mess)
 
 static void usage(void)
 {
-        die("Usage : mkfs.vvsfs <device name>)");
+        die("Usage : mkfs.dummyfs <device name>)");
 }
 
 int main(int argc, char ** argv)
@@ -39,9 +39,9 @@ int main(int argc, char ** argv)
         device = open(device_name,O_RDWR);
 
         off_t pos=0;
-        struct vvsfs_block block;
-	struct vvsfs_inode_table *table;
-	struct vvsfs_inode *inode;
+        struct dummyfs_block block;
+	struct dummyfs_inode_table *table;
+	struct dummyfs_inode *inode;
 	unsigned long numblocks = (unsigned long) (lseek(device, 0L, SEEK_END) / BLOCKSIZE);
         int i;
         int k;
@@ -49,11 +49,11 @@ int main(int argc, char ** argv)
 	pos = lseek(device, 0L, SEEK_SET);
 	printf("device has %lu blocks to write\n", numblocks);
 	printf("inode data size is %lu\n", MAX_INODE_DATA_SIZE);
-	printf("inode size itself is %lu\n", sizeof(struct vvsfs_inode));
+	printf("inode size itself is %lu\n", sizeof(struct dummyfs_inode));
 	printf("block data size is %lu\n", MAX_BLOCK_DATA_SIZE);
-	printf("block size itself is %lu\n", sizeof(struct vvsfs_block));
+	printf("block size itself is %lu\n", sizeof(struct dummyfs_block));
 	printf("table data size is %lu\n", MAX_TABLE_SIZE);
-	printf("table size itself is %lu\n", sizeof(struct vvsfs_inode_table));
+	printf("table size itself is %lu\n", sizeof(struct dummyfs_inode_table));
 
 	// FIXME: We don't check that numblocks <= u32max
 
@@ -64,7 +64,7 @@ int main(int argc, char ** argv)
 		// Fill out the inode table block
 		if (i == TABLE_BLOCK_INDEX) { 
 			printf("inode table block\n");
-			table = (struct vvsfs_inode_table *) &block;
+			table = (struct dummyfs_inode_table *) &block;
 			block.b_mode = BM_TABLE;
 			table->t_numblocks = numblocks;
 			for (k = 0; k < MAX_TABLE_SIZE; k++) {
@@ -78,7 +78,7 @@ int main(int argc, char ** argv)
 		else if (i == ROOT_DIR_BLOCK_INDEX) {
 			printf("root dir inode block\n");
 			block.b_mode = BM_INODE;
-			inode = (struct vvsfs_inode *) &block;
+			inode = (struct dummyfs_inode *) &block;
 			inode->i_ino = 0;
 			inode->i_mode = IM_DIR;
 			inode->i_links = 1;
@@ -102,7 +102,7 @@ int main(int argc, char ** argv)
 			die("seek set failed");
 
 		// Write the block to the device
-		if (sizeof(struct vvsfs_block) !=
+		if (sizeof(struct dummyfs_block) !=
 		    write(device, &block, BLOCKSIZE))
 			die("inode write failed");
 		pos += BLOCKSIZE;

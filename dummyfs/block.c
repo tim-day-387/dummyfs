@@ -2,10 +2,10 @@
  * Alex Barilaro, 2020
  * (based on the simplistic RAM filesystem McCreath 2001)
  *
- * This code all pertains to the manipulation of blocks on a vvsfs disk.
+ * This code all pertains to the manipulation of blocks on a dummyfs disk.
  */
 
-#include "vvsfs.h"
+#include "dummyfs.h"
 
 
 /*
@@ -13,21 +13,21 @@
  *
  * Returns size of block read.
  */
-static int vvsfs_readblock(struct super_block *sb,
+static int dummyfs_readblock(struct super_block *sb,
                            unsigned long block_index,
-                           struct vvsfs_block *block)
+                           struct dummyfs_block *block)
 {
         struct buffer_head *bh;
 
         if (DEBUG)
-                printk("vvsfs - readblock : %lu\n", block_index);
+                printk("dummyfs - readblock : %lu\n", block_index);
 
         bh = sb_bread(sb, block_index); // Move to the correct position on the device
         memcpy((void *) block, (void *) bh->b_data, BLOCKSIZE); // Read bytes from position
         brelse(bh);
 
         if (DEBUG)
-                printk("vvsfs - readblock done : %lu\n", block_index);
+                printk("dummyfs - readblock done : %lu\n", block_index);
 
         return BLOCKSIZE;
 }
@@ -37,14 +37,14 @@ static int vvsfs_readblock(struct super_block *sb,
  *
  * Returns size of block written.
  */
-static int vvsfs_writeblock(struct super_block *sb,
+static int dummyfs_writeblock(struct super_block *sb,
                             unsigned long block_index,
-                            struct vvsfs_block *block)
+                            struct dummyfs_block *block)
 {
         struct buffer_head *bh;
 
         if (DEBUG)
-                printk("vvsfs - writeblock : %lu\n", block_index);
+                printk("dummyfs - writeblock : %lu\n", block_index);
 
         bh = sb_bread(sb,block_index); // Move to the correct position on the device
         memcpy(bh->b_data, block, BLOCKSIZE); // Read block struct to position
@@ -53,7 +53,7 @@ static int vvsfs_writeblock(struct super_block *sb,
         brelse(bh);
             
         if (DEBUG)
-                printk("vvsfs - writeblock done: %lu\n", block_index);
+                printk("dummyfs - writeblock done: %lu\n", block_index);
 
         return BLOCKSIZE;
 }
@@ -64,18 +64,18 @@ static int vvsfs_writeblock(struct super_block *sb,
  *
  * Returns the block index of the inode (including on writes).
  */
-static unsigned long vvsfs_inode_block_index(struct super_block *sb,
+static unsigned long dummyfs_inode_block_index(struct super_block *sb,
 		                             unsigned long ino,
 					     int writing)
 {
-	struct vvsfs_inode_table table;
+	struct dummyfs_inode_table table;
 	unsigned long table_num;
 	unsigned long table_index = TABLE_BLOCK_INDEX;
 	unsigned long inode_index;
 	long long entry;
 
 	if (DEBUG)
-		printk("vvsfs - %s inode %lu block index",
+		printk("dummyfs - %s inode %lu block index",
 		    ((writing) ? "writing" : "getting"),
 		    ino);
 
@@ -96,13 +96,13 @@ static unsigned long vvsfs_inode_block_index(struct super_block *sb,
 		entry = ino;
 
 	if (DEBUG)
-		printk("vvsfs - ino %lu is at table %lu at entry %lld", ino, table_num, entry);
+		printk("dummyfs - ino %lu is at table %lu at entry %lld", ino, table_num, entry);
 
 	// Follow the linked list of inode tables
-	vvsfs_readblock(sb, TABLE_BLOCK_INDEX, (struct vvsfs_block *) &table);
+	dummyfs_readblock(sb, TABLE_BLOCK_INDEX, (struct dummyfs_block *) &table);
 	while (table_num > 0) {
 		table_index = table.b_next;
-		vvsfs_readblock(sb, table.b_next, (struct vvsfs_block *) &table);
+		dummyfs_readblock(sb, table.b_next, (struct dummyfs_block *) &table);
 		table_num--;
 	}
 	inode_index = table.t_table[entry];
@@ -110,11 +110,11 @@ static unsigned long vvsfs_inode_block_index(struct super_block *sb,
 	// Make any changes to the entry, if requested
 	if (writing) {
 		table.t_table[entry] = writing;
-		vvsfs_writeblock(sb, table_index, (struct vvsfs_block *) &table);
+		dummyfs_writeblock(sb, table_index, (struct dummyfs_block *) &table);
 	}
 
 	if (DEBUG)
-		printk("vvsfs - done %s inode %lu index",
+		printk("dummyfs - done %s inode %lu index",
 		    ((writing) ? "writing" : "getting"),
 		    ino);
 
@@ -128,20 +128,20 @@ static unsigned long vvsfs_inode_block_index(struct super_block *sb,
  *
  * Returns the size of the block read.
  */
-static int vvsfs_read_inode(struct super_block *sb,
+static int dummyfs_read_inode(struct super_block *sb,
                            unsigned long inum,
-                           struct vvsfs_inode *inode)
+                           struct dummyfs_inode *inode)
 {
 	unsigned long inode_block_index;
 
         if (DEBUG)
-                printk("vvsfs - reading inode %lu\n", inum);
+                printk("dummyfs - reading inode %lu\n", inum);
 
-	inode_block_index = vvsfs_inode_block_index(sb, inum, false);
-	vvsfs_readblock(sb, inode_block_index, (struct vvsfs_block *) inode);
+	inode_block_index = dummyfs_inode_block_index(sb, inum, false);
+	dummyfs_readblock(sb, inode_block_index, (struct dummyfs_block *) inode);
 	
         if (DEBUG)
-                printk("vvsfs - done reading inode %lu\n", inum);
+                printk("dummyfs - done reading inode %lu\n", inum);
 
         return BLOCKSIZE;
 }
@@ -153,20 +153,20 @@ static int vvsfs_read_inode(struct super_block *sb,
  *
  * Returns the size of the block written.
  */
-static int vvsfs_write_inode(struct super_block *sb,
+static int dummyfs_write_inode(struct super_block *sb,
                            unsigned long inum,
-                           struct vvsfs_inode *inode)
+                           struct dummyfs_inode *inode)
 {
 	unsigned long inode_block_index;
 
         if (DEBUG)
-                printk("vvsfs - writing inode %lu\n", inum);
+                printk("dummyfs - writing inode %lu\n", inum);
 
-	inode_block_index = vvsfs_inode_block_index(sb, inum, false);
-	vvsfs_writeblock(sb, inode_block_index, (struct vvsfs_block *) inode);
+	inode_block_index = dummyfs_inode_block_index(sb, inum, false);
+	dummyfs_writeblock(sb, inode_block_index, (struct dummyfs_block *) inode);
 
         if (DEBUG)
-                printk("vvsfs - done writing inode %lu\n", inum);
+                printk("dummyfs - done writing inode %lu\n", inum);
 
         return BLOCKSIZE;
 }
@@ -178,10 +178,10 @@ static int vvsfs_write_inode(struct super_block *sb,
  * Returns 0 if no empty blocks are found, or the index
  * of the block if found.
  */
-static unsigned long vvsfs_empty_block(struct super_block *sb)
+static unsigned long dummyfs_empty_block(struct super_block *sb)
 {
-	struct vvsfs_inode_table table;
-        struct vvsfs_block block;
+	struct dummyfs_inode_table table;
+        struct dummyfs_block block;
         unsigned long k;
 
 	/*
@@ -189,9 +189,9 @@ static unsigned long vvsfs_empty_block(struct super_block *sb)
 	 * the device has. Once we have that, we have the maximum bound for a
 	 * linear search through the blocks on the device.
 	 */
-	vvsfs_readblock(sb, TABLE_BLOCK_INDEX, (struct vvsfs_block *) &table);
+	dummyfs_readblock(sb, TABLE_BLOCK_INDEX, (struct dummyfs_block *) &table);
         for (k = 0; k < table.t_numblocks; k++) {
-                vvsfs_readblock(sb,k,&block);
+                dummyfs_readblock(sb,k,&block);
                 if (BM_IS_EMPTY(block.b_mode))
 			return k;
         }
@@ -206,32 +206,32 @@ static unsigned long vvsfs_empty_block(struct super_block *sb)
  * if no unallocated inodes are left (i.e.: every inode table is
  * full, and there's no more room to make another inode table).
  */
-static int vvsfs_empty_inode(struct super_block *sb)
+static int dummyfs_empty_inode(struct super_block *sb)
 {
-	struct vvsfs_inode_table table;
+	struct dummyfs_inode_table table;
 	unsigned long table_index;
 	unsigned long table_num = 0;
 	unsigned long new_table_index;
 	int k;
 
 	if (DEBUG)
-		printk("vvsfs - finding an empty inode");
+		printk("dummyfs - finding an empty inode");
 
 	// Traverse the linked list of inode tables to spot an unallocated entry
 	table_index = TABLE_BLOCK_INDEX;
-	vvsfs_readblock(sb, TABLE_BLOCK_INDEX, (struct vvsfs_block *) &table);
+	dummyfs_readblock(sb, TABLE_BLOCK_INDEX, (struct dummyfs_block *) &table);
 	while (true) {
 		for (k = 0; k < MAX_TABLE_SIZE; k++) { // Search through a table
-			printk("vvsfs - table[%d] is %u", k, table.t_table[k]);
+			printk("dummyfs - table[%d] is %u", k, table.t_table[k]);
 			if (BM_IS_UNALLOCATED(table.t_table[k])) {
 				if (DEBUG)
-					printk("vvsfs - done empty inode");
+					printk("dummyfs - done empty inode");
 				return k + (table_num*MAX_TABLE_SIZE);
 			}
 		}
 		if (!BM_IS_UNALLOCATED(table.b_next)) { // Move to the next table, if present
 			table_index = table.b_next;
-			vvsfs_readblock(sb, table.b_next, (struct vvsfs_block *) &table);
+			dummyfs_readblock(sb, table.b_next, (struct dummyfs_block *) &table);
 			table_num++;
 		} else {
 			break;
@@ -240,24 +240,24 @@ static int vvsfs_empty_inode(struct super_block *sb)
 
 	// If we get to here, we need to make a new inode table
 	if (DEBUG)
-		printk("vvsfs - creating a new inode table");
-	new_table_index = vvsfs_empty_block(sb); // Get a new empty block
+		printk("dummyfs - creating a new inode table");
+	new_table_index = dummyfs_empty_block(sb); // Get a new empty block
 	if (!new_table_index) {
-		printk("vvsfs - no free blocks to allocate a new table!");
+		printk("dummyfs - no free blocks to allocate a new table!");
 		return 0;
 	}
 	table.b_next = new_table_index; // Update the current table to point to the new one
-	vvsfs_writeblock(sb, table_index, (struct vvsfs_block *) &table);
+	dummyfs_writeblock(sb, table_index, (struct dummyfs_block *) &table);
 
 	// Fill out the fields for the new table and write it
 	for (k = 0; k < MAX_TABLE_SIZE; k++)
 		table.t_table[k] = BM_UNALLOCATED;
 	table.b_next = BM_UNALLOCATED;
-	vvsfs_writeblock(sb, new_table_index, (struct vvsfs_block *) &table);
+	dummyfs_writeblock(sb, new_table_index, (struct dummyfs_block *) &table);
 	table_num++;
 
 	if (DEBUG)
-		printk("vvsfs - done finding empty inode");
+		printk("dummyfs - done finding empty inode");
 
 	return (table_num * MAX_TABLE_SIZE);
 }
@@ -265,9 +265,9 @@ static int vvsfs_empty_inode(struct super_block *sb)
 /*
  * Initialise a new inode on disk and return a VFS inode.
  */
-struct inode *vvsfs_new_inode(const struct inode *dir, umode_t mode, unsigned short inode_mode)
+struct inode *dummyfs_new_inode(const struct inode *dir, umode_t mode, unsigned short inode_mode)
 {
-        struct vvsfs_inode block;
+        struct dummyfs_inode block;
         struct super_block *sb;
         struct inode *inode;
         unsigned long block_index;
@@ -275,7 +275,7 @@ struct inode *vvsfs_new_inode(const struct inode *dir, umode_t mode, unsigned sh
 	int k;
 
         if (DEBUG)
-	        printk("vvsfs - new inode\n");
+	        printk("dummyfs - new inode\n");
 
         if (!dir)
 	        return NULL;
@@ -287,16 +287,16 @@ struct inode *vvsfs_new_inode(const struct inode *dir, umode_t mode, unsigned sh
 	        return NULL;
 
 	// Find a new inode in the superblock
-	new_inode_number = vvsfs_empty_inode(sb);
+	new_inode_number = dummyfs_empty_inode(sb);
 	if (new_inode_number == 0) {
-		printk("vvsfs - inode table is full\n");
+		printk("dummyfs - inode table is full\n");
 		return NULL;
 	}
 
 	// Find an empty block in the superblock
-        block_index = vvsfs_empty_block(sb);
+        block_index = dummyfs_empty_block(sb);
         if (block_index == 0) {
-        	printk("vvsfs - no empty blocks left\n");
+        	printk("dummyfs - no empty blocks left\n");
 	        return NULL;
         }
 
@@ -312,10 +312,10 @@ struct inode *vvsfs_new_inode(const struct inode *dir, umode_t mode, unsigned sh
 	for (k = 0; k < MAX_INODE_DATA_SIZE; k++)
 		block.i_data[k] = 0;
 	block.b_next = BM_UNALLOCATED;
-	vvsfs_writeblock(sb, block_index, (struct vvsfs_block *) &block);
+	dummyfs_writeblock(sb, block_index, (struct dummyfs_block *) &block);
 
 	// Add the block index to the inode table
-	vvsfs_inode_block_index(sb, block.i_ino, block_index);
+	dummyfs_inode_block_index(sb, block.i_ino, block_index);
 
 	// Initialise the VFS inode metadata
         inode_init_owner(inode, dir, mode);
@@ -325,7 +325,7 @@ struct inode *vvsfs_new_inode(const struct inode *dir, umode_t mode, unsigned sh
         insert_inode_hash(inode);
 
 	if (DEBUG)
-		printk("vvsfs - done new inode");
+		printk("dummyfs - done new inode");
 
         return inode;
 }
@@ -336,17 +336,17 @@ struct inode *vvsfs_new_inode(const struct inode *dir, umode_t mode, unsigned sh
  *
  * Returns a pointer to the data in memory.
  */
-static char *vvsfs_map_data(struct super_block *sb,
-		            struct vvsfs_inode *inode,
+static char *dummyfs_map_data(struct super_block *sb,
+		            struct dummyfs_inode *inode,
 		            unsigned int extra)
 {
-	struct vvsfs_block disk_data;
+	struct dummyfs_block disk_data;
 	unsigned char *mem_data = vmalloc(inode->i_size + extra);
 	unsigned char *eof = mem_data+inode->i_size+extra;
 	unsigned char *pos = mem_data;
 
 	if (DEBUG)
-		printk("vvsfs - mapping %u+%u data from inode %u",
+		printk("dummyfs - mapping %u+%u data from inode %u",
 		    inode->i_size,
 		    extra,
 		    inode->i_ino);
@@ -365,24 +365,24 @@ static char *vvsfs_map_data(struct super_block *sb,
 	 */
 	if (BM_IS_UNALLOCATED(inode->b_next)) { // If the inline data is all there was...
 		if (DEBUG) {
-			printk("vvsfs - inode had no extra data blocks");
-			printk("vvsfs - done map data");
+			printk("dummyfs - inode had no extra data blocks");
+			printk("dummyfs - done map data");
 		}
 		return mem_data;
 	} else {
 		if (DEBUG)
-			printk("vvsfs - inode has extra data blocks");
-		vvsfs_readblock(sb, inode->b_next, &disk_data);
+			printk("dummyfs - inode has extra data blocks");
+		dummyfs_readblock(sb, inode->b_next, &disk_data);
 		while (true) { // Traverse the linked list
 			memcpy(pos, disk_data.b_data, MIN(MAX_BLOCK_DATA_SIZE, eof-pos));
 			pos += MIN(MAX_BLOCK_DATA_SIZE, eof-pos);
 			if (!BM_IS_UNALLOCATED(disk_data.b_next)) 
-				vvsfs_readblock(sb, disk_data.b_next, &disk_data);
+				dummyfs_readblock(sb, disk_data.b_next, &disk_data);
 			else // Stop when we hit the end
 				break;
 		}
 		if (DEBUG)
-			printk("vvsfs - done map data");
+			printk("dummyfs - done map data");
 		return mem_data;
 	}
 
@@ -396,42 +396,42 @@ static char *vvsfs_map_data(struct super_block *sb,
  * allocation was made, and returns 0 if the allocation
  * failed.
  */
-static unsigned long vvsfs_alloc_data(struct super_block *sb,
-		                      struct vvsfs_block *prev,
+static unsigned long dummyfs_alloc_data(struct super_block *sb,
+		                      struct dummyfs_block *prev,
 				      unsigned long prev_index)
 {
-	struct vvsfs_block new;
+	struct dummyfs_block new;
 	unsigned long new_index;
 	int k;
 
 	if (DEBUG)
-		printk("vvsfs - allocating new data block\n");
+		printk("dummyfs - allocating new data block\n");
 
 	// Check to see if our work is already done
 	if (!BM_IS_UNALLOCATED(prev->b_next)) {
-		printk("vvsfs - current block already has a successor!\n");
+		printk("dummyfs - current block already has a successor!\n");
 		if (DEBUG)
-			printk("vvsfs - done allocation\n");
+			printk("dummyfs - done allocation\n");
 		return prev->b_next;
 	}
 
 	// Sigh... If we're here, we actually need to do something.
-	new_index = vvsfs_empty_block(sb);
+	new_index = dummyfs_empty_block(sb);
 	if (new_index == 0) { // Report failures
-		printk("vvsfs - no empty blocks left!\n");
+		printk("dummyfs - no empty blocks left!\n");
 	} else { 
 		prev->b_next = new_index; // Point the previous block to the new one
-		vvsfs_writeblock(sb, prev_index, prev);
+		dummyfs_writeblock(sb, prev_index, prev);
 		new.b_mode = BM_DATA; // Write out empty data to the newly-allocated block
 		                      // (so there aren't any nasty artefacts from memory)
 		for (k = 0; k < MAX_BLOCK_DATA_SIZE; k++) 
 			new.b_data[k] = 0;
 		new.b_next = BM_UNALLOCATED;
-		vvsfs_writeblock(sb, new_index, &new);
+		dummyfs_writeblock(sb, new_index, &new);
 	}
 
 	if (DEBUG)
-		printk("vvsfs - done allocation\n");
+		printk("dummyfs - done allocation\n");
 	return new_index;
 
 }
@@ -440,15 +440,15 @@ static unsigned long vvsfs_alloc_data(struct super_block *sb,
  * Deallocate (mark as empty) every block in a linked list
  * of data blocks for a file.
  */
-static void vvsfs_dealloc_data(struct super_block *sb,
+static void dummyfs_dealloc_data(struct super_block *sb,
 			       unsigned long block_index)
 {
-	struct vvsfs_block block;
+	struct dummyfs_block block;
 	unsigned long next;
 	int k;
 
 	if (DEBUG)
-		printk("vvsfs - deallocating data blocks, starting with %lu",
+		printk("dummyfs - deallocating data blocks, starting with %lu",
 		       block_index);
 
 	/*
@@ -457,20 +457,20 @@ static void vvsfs_dealloc_data(struct super_block *sb,
 	 * whose b_next field is unallocated).
 	 */
 	while (true) {
-		vvsfs_readblock(sb, block_index, &block);
+		dummyfs_readblock(sb, block_index, &block);
 		next = block.b_next;
 		block.b_mode = BM_EMPTY;
 		for (k = 0; k < MAX_BLOCK_DATA_SIZE; k++)
 			block.b_data[k] = BM_UNALLOCATED;
 		block.b_next = BM_UNALLOCATED;
-		vvsfs_writeblock(sb, block_index, &block);
+		dummyfs_writeblock(sb, block_index, &block);
 		block_index = next;
 		if (BM_IS_UNALLOCATED(block_index)) // Break if we hit the end
 			break;
 	}
 
 	if (DEBUG)
-		printk("vvsfs - done deallocating data blocks");
+		printk("dummyfs - done deallocating data blocks");
 }
 
 /*
@@ -479,20 +479,20 @@ static void vvsfs_dealloc_data(struct super_block *sb,
  *
  * Returns the amount of data written.
  */
-static int vvsfs_write_data(struct super_block *sb,
-		            struct vvsfs_inode *inode,
+static int dummyfs_write_data(struct super_block *sb,
+		            struct dummyfs_inode *inode,
 			    unsigned char *data,
 			    unsigned long size)
 {
-	struct vvsfs_block block;
+	struct dummyfs_block block;
 	unsigned long required;
 	long long remainder_size;
-	unsigned long block_index = vvsfs_inode_block_index(sb, inode->i_ino, false);
+	unsigned long block_index = dummyfs_inode_block_index(sb, inode->i_ino, false);
 	unsigned char *eof = data+size;
 	unsigned char *pos = data;
 
 	if (DEBUG)
-		printk("vvsfs - writing data (%lu bytes)", size);
+		printk("dummyfs - writing data (%lu bytes)", size);
 
 	// Calculate how many blocks we'll need beyond the inode's inline data
 	remainder_size = ((signed long long) size) - MAX_INODE_DATA_SIZE;
@@ -500,7 +500,7 @@ static int vvsfs_write_data(struct super_block *sb,
 		? DIV_ROUND_UP(remainder_size, MAX_BLOCK_DATA_SIZE)
 		: 0;
 	if (DEBUG)
-		printk("vvsfs - data write needs %lu blocks after inode block", required);
+		printk("dummyfs - data write needs %lu blocks after inode block", required);
 
 	/*
 	 * Allocate the extra blocks we need.
@@ -510,25 +510,25 @@ static int vvsfs_write_data(struct super_block *sb,
 	 * blocks and truncating data.
 	 */
 	if (required) {
-		block_index = vvsfs_alloc_data(sb, (struct vvsfs_block *) inode, block_index);
+		block_index = dummyfs_alloc_data(sb, (struct dummyfs_block *) inode, block_index);
 		if (block_index == 0) { // If there are no more empty blocks, truncate the data
 			                // by marking the eof as earlier than it actually is.
-			printk("vvsfs - will only write what I can fit");
+			printk("dummyfs - will only write what I can fit");
 			eof = data + MAX_INODE_DATA_SIZE;
 			required = 0;
 		} else {
-			vvsfs_readblock(sb, block_index, &block);
+			dummyfs_readblock(sb, block_index, &block);
 			pos += MAX_INODE_DATA_SIZE;
 			required--;
 		}
 		while (required > 0) {
-			block_index = vvsfs_alloc_data(sb, &block, block_index);
+			block_index = dummyfs_alloc_data(sb, &block, block_index);
 			if (block_index == 0) {
-				printk("vvsfs - will only write what I can fit");
+				printk("dummyfs - will only write what I can fit");
 				eof = pos + MAX_BLOCK_DATA_SIZE;
 				required = 0;
 			} else {
-				vvsfs_readblock(sb, block_index, &block);
+				dummyfs_readblock(sb, block_index, &block);
 				pos += MAX_BLOCK_DATA_SIZE;
 				required--;
 			}
@@ -537,23 +537,23 @@ static int vvsfs_write_data(struct super_block *sb,
 
 	// Time to write to disk!
 	if (DEBUG)
-		printk("vvsfs - beginning writes to disk");
+		printk("dummyfs - beginning writes to disk");
 	
 	// Reset all the pointers to be back to the start (we adjusted them
 	// in case we needed to truncate data in the above allocation loop)
 	pos = data; 
-	block_index = vvsfs_inode_block_index(sb, inode->i_ino, false);
+	block_index = dummyfs_inode_block_index(sb, inode->i_ino, false);
 
 	// Copy out the inline data first
 	memcpy(inode->i_data, pos, MIN(MAX_INODE_DATA_SIZE, eof - pos));
 	inode->i_size = eof - data;
-	vvsfs_writeblock(sb, block_index, (struct vvsfs_block *) inode);
+	dummyfs_writeblock(sb, block_index, (struct dummyfs_block *) inode);
 	pos += MIN(MAX_INODE_DATA_SIZE, eof - pos);
 
 	// Iterate through the linked list, copying data, until we hit the end
 	if (!BM_IS_UNALLOCATED(inode->b_next)) {
 		block_index = inode->b_next;
-		vvsfs_readblock(sb, inode->b_next, &block);
+		dummyfs_readblock(sb, inode->b_next, &block);
 		while (pos != eof) {
 
 			/*
@@ -563,16 +563,16 @@ static int vvsfs_write_data(struct super_block *sb,
 			 * reads will thank us later)
 			 */
 			memcpy(block.b_data, pos, MIN(MAX_BLOCK_DATA_SIZE, eof - pos));
-			vvsfs_writeblock(sb, block_index, &block);
+			dummyfs_writeblock(sb, block_index, &block);
 			pos += MIN(MAX_BLOCK_DATA_SIZE, eof - pos);
 			block_index = block.b_next;
 			if (!BM_IS_UNALLOCATED(block.b_next))
-				vvsfs_readblock(sb, block.b_next, &block);
+				dummyfs_readblock(sb, block.b_next, &block);
 		}
 	}
 
 	if (DEBUG)
-		printk("vvsfs - done write data");
+		printk("dummyfs - done write data");
 
 	return pos - data;
 	

@@ -42,14 +42,14 @@
 
 #include <linux/types.h>
 
-struct vvsfs_block
+struct dummyfs_block
 {
 	__u8 	b_mode;
 	unsigned char 	b_data[MAX_BLOCK_DATA_SIZE];
 	__u32 	b_next;
 };
 
-struct vvsfs_inode_table
+struct dummyfs_inode_table
 {
 	__u8 	b_mode;
 	__u8 	t_padding[3];
@@ -59,7 +59,7 @@ struct vvsfs_inode_table
 };
 	
 
-struct vvsfs_inode
+struct dummyfs_inode
 {
 	__u8 	b_mode;
 	__u32 	i_ino;
@@ -74,7 +74,7 @@ struct vvsfs_inode
 };
 
 
-struct vvsfs_dir_listing
+struct dummyfs_dir_listing
 {
         char 	l_name[MAX_NAME_SIZE+1];
         __u32 l_ino;

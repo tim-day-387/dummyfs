@@ -1,10 +1,10 @@
 #!/bin/bash
 set -e
 
-KMOD_NAME=vvsfs
+KMOD_NAME=dummyfs
 ROOT_DIR=$PWD
-KMOD_LOC=$ROOT_DIR/vvsfs/vvsfs.ko
-MKFS_LOC=$ROOT_DIR/utils/mkfs.vvsfs
+KMOD_LOC=$ROOT_DIR/dummyfs/dummyfs.ko
+MKFS_LOC=$ROOT_DIR/utils/mkfs.dummyfs
 TRUN_LOC=$ROOT_DIR/utils/truncate
 
 
