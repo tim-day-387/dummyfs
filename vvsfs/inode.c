@@ -229,7 +229,7 @@ static ssize_t vvsfs_file_read(struct file *filp,
 	*ppos += size;
 
 	if (DEBUG)
-		printk("vvsfs - copying %lu bytes to userspace, and size is %ld\n", file_data.i_size, size);
+		printk("vvsfs - copying %u bytes to userspace, and size is %ld\n", file_data.i_size, size);
 
 	// Copy the data from memory to userspace
 	if (copy_to_user(buf,data + offset,size))
@@ -252,8 +252,7 @@ static int vvsfs_unlink(struct inode *dir, struct dentry *dentry)
 {
 
 	int num_listings, k, l;
-        struct vvsfs_inode dir_data, file_data;
-	struct vvsfs_block empty_data;
+        struct vvsfs_inode dir_data;
 	unsigned long file_data_index;
         struct inode *inode;
 	unsigned char *listings;
@@ -305,7 +304,7 @@ static int vvsfs_unlink(struct inode *dir, struct dentry *dentry)
 	if (!inode) {
 		printk("vvsfs - your dentry has no inode attached, can't perform disk removal!");
 		printk("vvsfs - you may now an orphaned inode in the VFS and on disk that you can't access");
-		return ERR_PTR(-EACCES);
+		return -EACCES;
 	}
 
 	// Remove inode and data blocks from superblock if the last link is gone
@@ -350,7 +349,7 @@ static int vvsfs_rmdir(struct inode *dir, struct dentry *dentry)
                 printk("vvsfs - cannot unlink directory, has %d files\n", num_dirs);
 		if (DEBUG)
 			printk("vvsfs - done rmdir");
-                return ERR_PTR(-ENOTEMPTY);
+                return -ENOTEMPTY;
         }
 
 	if (DEBUG)
@@ -530,50 +529,6 @@ static struct dentry *vvsfs_lookup(struct inode *dir,
 		printk("vvsfs - done lookup");
 
         return NULL;
-}
-
-/*
- * Truncate (or extend) a file to a certain length.
- *
- * Unused, because the truncate field in inode_operations
- * doesn't exist anymore. I was referring to a half-decade
- * old book to find out what each inode_operation's parameters
- * meant when doing this assignment. Oops.
- */
-static void vvsfs_truncate(struct inode *inode)
-{
-	struct vvsfs_inode iblock;
-	unsigned char *data;
-	unsigned char *pos;
-	unsigned long extra;
-
-	if (DEBUG)
-		printk("vvsfs - truncate inode %lu", inode->i_ino);
-
-	vvsfs_read_inode(inode->i_sb, inode->i_ino, &iblock);
-	extra = (inode->i_size >= iblock.i_size) ? inode->i_size - iblock.i_size : 0;
-	data = vvsfs_map_data(inode->i_sb, &iblock, extra);
-
-	if (extra) {
-		// from iblock to inode
-		pos = data + iblock.i_size;
-		while (extra > 0) {
-			*pos = 0;
-			pos++;
-			extra--;
-		}
-	} else {
-		// from inode to iblock
-		pos = data + inode->i_size;
-		while (pos - data < iblock.i_size) {
-			*pos = 0;
-			pos++;
-		}
-	}
-
-	vvsfs_write_data(inode->i_sb, &iblock, data, (iblock.i_size + extra));
-	iblock.i_size = inode->i_size;
-	vvsfs_write_inode(inode->i_sb, iblock.i_ino, &iblock);
 }
 
 /*

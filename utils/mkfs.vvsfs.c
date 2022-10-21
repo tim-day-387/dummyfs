@@ -59,7 +59,7 @@ int main(int argc, char ** argv)
 
         for (i = 0; i < numblocks; i++) {  // write each of the blocks
 
-                printf("writing %lu : ",i);
+                printf("writing %u : ",i);
 
 		// Fill out the inode table block
 		if (i == TABLE_BLOCK_INDEX) { 

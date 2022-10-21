@@ -222,7 +222,7 @@ static int vvsfs_empty_inode(struct super_block *sb)
 	vvsfs_readblock(sb, TABLE_BLOCK_INDEX, (struct vvsfs_block *) &table);
 	while (true) {
 		for (k = 0; k < MAX_TABLE_SIZE; k++) { // Search through a table
-			printk("vvsfs - table[%d] is %lu", k, table.t_table[k]);
+			printk("vvsfs - table[%d] is %u", k, table.t_table[k]);
 			if (BM_IS_UNALLOCATED(table.t_table[k])) {
 				if (DEBUG)
 					printk("vvsfs - done empty inode");
@@ -346,7 +346,7 @@ static char *vvsfs_map_data(struct super_block *sb,
 	unsigned char *pos = mem_data;
 
 	if (DEBUG)
-		printk("vvsfs - mapping %lu+%lu data from inode %lu",
+		printk("vvsfs - mapping %u+%u data from inode %u",
 		    inode->i_size,
 		    extra,
 		    inode->i_ino);

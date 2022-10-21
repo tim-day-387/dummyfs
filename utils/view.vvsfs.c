@@ -64,7 +64,7 @@ int main(int argc, char ** argv)
 			printf("%2d: Empty block\n", i);
 		else if (BM_IS_INODE(block.b_mode)) {
 			inode = (struct vvsfs_inode *) &block;
-			printf("%2d: Inode %lu : %s : %lu bytes : next block is %s\n",
+			printf("%2d: Inode %u : %s : %u bytes : next block is %s\n",
 					i,
 					inode->i_ino,
 					(IM_IS_DIR(inode->i_mode) ? "Dir" : "Reg"),
