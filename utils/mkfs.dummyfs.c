@@ -1,9 +1,7 @@
-/*
- *  mkfs.dummyfs - constructs an initial empty file system
- * Eric McCreath 2006 GPL
- *
- * To compile :
- *     gcc mkfs.dummyfs.c -o mkfs.dummyfs
+/* Eric McCreath, 2006-2020, GPL
+ * Alex Barilaro, 2020
+ * Timothy Day, 2022
+ * (based on the simplistic RAM filesystem McCreath 2001)
  */
 
 #include <stdio.h>

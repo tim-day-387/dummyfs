@@ -1,9 +1,7 @@
 /* Eric McCreath, 2006-2020, GPL
  * Alex Barilaro, 2020
+ * Timothy Day, 2022
  * (based on the simplistic RAM filesystem McCreath 2001)
- *
- * This code pertains to the manipulation of VFS inodes and
- * reflecting VFS data back to a dummyfs disk.
  */
 
 #include <linux/module.h>
