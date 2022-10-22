@@ -1,3 +1,6 @@
+#ifndef MOD
+#define MOD
+
 #define BLOCKSIZE 	512
 #define BLOCKSIZE_BITS 	8
 #define MAX_NAME_SIZE 	40
@@ -85,3 +88,5 @@ extern struct file_operations dummyfs_file_operations;
 extern struct inode_operations dummyfs_dir_inode_operations;
 extern struct file_operations dummyfs_dir_operations;
 extern struct super_operations dummyfs_ops;
+
+#endif

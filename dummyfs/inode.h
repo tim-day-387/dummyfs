@@ -5,6 +5,8 @@
  * This code pertains to the manipulation of VFS inodes and
  * reflecting VFS data back to a dummyfs disk.
  */
+#ifndef INODE
+#define INODE
 
 struct inode *dummyfs_iget(struct super_block *, unsigned long);
 struct dentry *dummyfs_lookup(struct inode *, struct dentry *, unsigned int);
@@ -18,3 +20,5 @@ int dummyfs_link(struct dentry *, struct inode *, struct dentry *);
 int dummyfs_file_create(struct inode *, struct dentry *, umode_t, bool);
 int dummyfs_mkdir(struct inode *, struct dentry *, umode_t);
 int dummyfs_fill_super(struct super_block *, void *, int);
+
+#endif
