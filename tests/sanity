@@ -3,7 +3,7 @@ set -e
 
 KMOD_NAME=dummyfs
 ROOT_DIR=$PWD
-KMOD_LOC=$ROOT_DIR/dummyfs/dummyfs.ko
+KMOD_LOC=$ROOT_DIR/dummyfs.ko
 MKFS_LOC=$ROOT_DIR/utils/mkfs.dummyfs
 TRUN_LOC=$ROOT_DIR/utils/truncate
 
@@ -81,7 +81,7 @@ clean() {
 
 echo "dummyfs sanity tests - start"
 
-if [[ $1 == "--clean" ]]
+if [[ $1 == "clean" ]]
 then
   umount_dir
   remove_kmod

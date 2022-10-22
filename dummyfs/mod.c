@@ -24,7 +24,9 @@
 #include <asm/uaccess.h>
 #include <linux/cred.h>
 
-#include "inode.c"
+#include "mod.h"
+#include "inode.h"
+#include "block.h"
 
 static void dummyfs_put_super(struct super_block *sb)
 {
@@ -42,18 +44,18 @@ static int dummyfs_statfs(struct dentry *dentry, struct kstatfs *buf)
         return 0;
 }
 
-static struct file_operations dummyfs_file_operations =
+struct file_operations dummyfs_file_operations =
 {
 	read:   dummyfs_file_read,
 	write:  dummyfs_file_write,
 };
 
-static struct inode_operations dummyfs_file_inode_operations =
+struct inode_operations dummyfs_file_inode_operations =
 {
 //       truncate: dummyfs_truncate,
 };
 
-static struct file_operations dummyfs_dir_operations =
+struct file_operations dummyfs_dir_operations =
 {
 	.llseek  = generic_file_llseek, 
 	.read    = generic_read_dir,
@@ -61,7 +63,7 @@ static struct file_operations dummyfs_dir_operations =
 	.fsync   = generic_file_fsync,
 };
 
-static struct inode_operations dummyfs_dir_inode_operations =
+struct inode_operations dummyfs_dir_inode_operations =
 {
 	create: dummyfs_file_create,
 	lookup: dummyfs_lookup,
@@ -71,7 +73,7 @@ static struct inode_operations dummyfs_dir_inode_operations =
 	link: dummyfs_link,
 };
 
-static struct super_operations dummyfs_ops =
+struct super_operations dummyfs_ops =
 {
 	statfs:     dummyfs_statfs,
 	put_super:  dummyfs_put_super,
@@ -85,7 +87,7 @@ static struct dentry *dummyfs_mount(struct file_system_type *fs_type,
 	return mount_bdev(fs_type, flags, dev_name, data, dummyfs_fill_super);
 }
 
-static struct file_system_type dummyfs_type =
+struct file_system_type dummyfs_type =
 {
 	.owner      = THIS_MODULE,
 	.name       = "dummyfs",

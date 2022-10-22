@@ -12,7 +12,7 @@
 #include <sys/types.h>
 #include <unistd.h>
 
-#include "../dummyfs/dummyfs.h"
+#include "../dummyfs/mod.h"
 
 char* device_name;
 int device;

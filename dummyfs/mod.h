@@ -79,3 +79,9 @@ struct dummyfs_dir_listing
         char 	l_name[MAX_NAME_SIZE+1];
         __u32 l_ino;
 };
+
+extern struct inode_operations dummyfs_file_inode_operations;
+extern struct file_operations dummyfs_file_operations;
+extern struct inode_operations dummyfs_dir_inode_operations;
+extern struct file_operations dummyfs_dir_operations;
+extern struct super_operations dummyfs_ops;

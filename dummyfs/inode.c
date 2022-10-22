@@ -6,25 +6,37 @@
  * reflecting VFS data back to a dummyfs disk.
  */
 
-#include "block.c"
+#include <linux/module.h>
+#include <linux/fs.h>
+#include <linux/proc_fs.h>
+#include <linux/mm.h>
+#include <linux/slab.h>
+#include <linux/types.h>
+#include <linux/errno.h>
+#include <linux/slab.h>
+#include <linux/init.h>
+#include <linux/statfs.h>
+#include <linux/blkdev.h>
+#include <linux/buffer_head.h>
+#include <linux/kernel.h>
+#include <linux/version.h>
+#include <linux/vmalloc.h>
+#include <asm/uaccess.h>
+#include <linux/cred.h>
 
-static struct inode_operations dummyfs_file_inode_operations;
-static struct file_operations dummyfs_file_operations;
-static struct inode_operations dummyfs_dir_inode_operations;
-static struct file_operations dummyfs_dir_operations;
-static struct super_operations dummyfs_ops;
-
-struct inode *dummyfs_iget(struct super_block *sb, unsigned long ino);
+#include "mod.h"
+#include "block.h"
+#include "inode.h"
 
 /*
  * Create an inode in a directory.
  *
  * Returns 0 on success.
  */
-static int dummyfs_create(struct inode *dir,
-                        struct dentry* dentry,
-                        umode_t mode,
-                        unsigned short inode_mode)
+int dummyfs_create(struct inode *dir,
+		   struct dentry* dentry,
+		   umode_t mode,
+		   unsigned short inode_mode)
 {
         struct dummyfs_inode dir_data;
         int num_listings;
@@ -105,10 +117,10 @@ static int dummyfs_create(struct inode *dir,
  *
  * Works by reading in an inode and appending a series
  * of bytes (from userspace) to its data field.  */
-static ssize_t dummyfs_file_write(struct file *filp,
-                                const char *buf,
-                                size_t count,
-                                loff_t *ppos)
+ssize_t dummyfs_file_write(struct file *filp,
+			   const char *buf,
+			   size_t count,
+			   loff_t *ppos)
 {
 
         struct dummyfs_inode file_data;// dir_data;
@@ -183,10 +195,10 @@ static ssize_t dummyfs_file_write(struct file *filp,
  *
  * Returns the size of the read.
  */
-static ssize_t dummyfs_file_read(struct file *filp,
-                               char *buf,
-                               size_t count,
-                               loff_t *ppos)
+ssize_t dummyfs_file_read(struct file *filp,
+			  char *buf,
+			  size_t count,
+			  loff_t *ppos)
 {
 
 	struct dummyfs_inode file_data;
@@ -248,7 +260,7 @@ static ssize_t dummyfs_file_read(struct file *filp,
  *
  * Returns 0 on success.
  */
-static int dummyfs_unlink(struct inode *dir, struct dentry *dentry)
+int dummyfs_unlink(struct inode *dir, struct dentry *dentry)
 {
 
 	int num_listings, k, l;
@@ -332,7 +344,7 @@ static int dummyfs_unlink(struct inode *dir, struct dentry *dentry)
  *
  * Returns 0 on success.
  */
-static int dummyfs_rmdir(struct inode *dir, struct dentry *dentry)
+int dummyfs_rmdir(struct inode *dir, struct dentry *dentry)
 {
         struct dummyfs_inode dir_data;
         struct inode *del = dentry->d_inode;
@@ -362,7 +374,7 @@ static int dummyfs_rmdir(struct inode *dir, struct dentry *dentry)
  *
  * Returns 0 on success.
  */
-static int dummyfs_readdir(struct file *filp, struct dir_context *ctx)
+int dummyfs_readdir(struct file *filp, struct dir_context *ctx)
 {
         struct inode *inode;
         struct dummyfs_inode dir_data;
@@ -415,9 +427,9 @@ static int dummyfs_readdir(struct file *filp, struct dir_context *ctx)
  *
  * Returns 0 on success.
  */
-static int dummyfs_link(struct dentry *old_dentry,
-                      struct inode *dir,
-                      struct dentry *dentry)
+int dummyfs_link(struct dentry *old_dentry,
+		 struct inode *dir,
+		 struct dentry *dentry)
 {
         struct dummyfs_inode data;
         int num_listings;
@@ -483,9 +495,9 @@ static int dummyfs_link(struct dentry *old_dentry,
  * Returns NULL on success (the dentry is stored in the
  * dentry struct passed as a parameter).
  */
-static struct dentry *dummyfs_lookup(struct inode *dir,
-                                   struct dentry *dentry,
-                                   unsigned int flags)
+struct dentry *dummyfs_lookup(struct inode *dir,
+			      struct dentry *dentry,
+			      unsigned int flags)
 {
         int num_listings, k;
         struct dummyfs_inode dir_data;
@@ -537,10 +549,10 @@ static struct dentry *dummyfs_lookup(struct inode *dir,
  *
  * Returns 0 on success.
  */
-static int dummyfs_file_create(struct inode *dir,
-		             struct dentry *dentry,
-			     umode_t mode,
-			     bool excl)
+int dummyfs_file_create(struct inode *dir,
+			struct dentry *dentry,
+			umode_t mode,
+			bool excl)
 {
 	return dummyfs_create(dir, dentry, mode, IM_REG);
 }
@@ -551,9 +563,9 @@ static int dummyfs_file_create(struct inode *dir,
  *
  * Returns 0 on success.
  */
-static int dummyfs_mkdir(struct inode *dir,
-		       struct dentry *dentry,
-		       umode_t mode)
+int dummyfs_mkdir(struct inode *dir,
+		  struct dentry *dentry,
+		  umode_t mode)
 {
 	return dummyfs_create(dir, dentry, mode, IM_DIR);
 }
@@ -611,7 +623,7 @@ struct inode *dummyfs_iget(struct super_block *sb, unsigned long ino)
  *
  * Returns 0 on success.
  */
-static int dummyfs_fill_super(struct super_block *s, void *data, int silent)
+int dummyfs_fill_super(struct super_block *s, void *data, int silent)
 {
 	struct inode *i;
 	struct dummyfs_inode inode;

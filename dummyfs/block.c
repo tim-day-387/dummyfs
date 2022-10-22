@@ -5,7 +5,26 @@
  * This code all pertains to the manipulation of blocks on a dummyfs disk.
  */
 
-#include "dummyfs.h"
+#include <linux/module.h>
+#include <linux/fs.h>
+#include <linux/proc_fs.h>
+#include <linux/mm.h>
+#include <linux/slab.h>
+#include <linux/types.h>
+#include <linux/errno.h>
+#include <linux/slab.h>
+#include <linux/init.h>
+#include <linux/statfs.h>
+#include <linux/blkdev.h>
+#include <linux/buffer_head.h>
+#include <linux/kernel.h>
+#include <linux/version.h>
+#include <linux/vmalloc.h>
+#include <asm/uaccess.h>
+#include <linux/cred.h>
+
+#include "mod.h"
+#include "block.h"
 
 
 /*
@@ -13,9 +32,9 @@
  *
  * Returns size of block read.
  */
-static int dummyfs_readblock(struct super_block *sb,
-                           unsigned long block_index,
-                           struct dummyfs_block *block)
+int dummyfs_readblock(struct super_block *sb,
+		      unsigned long block_index,
+		      struct dummyfs_block *block)
 {
         struct buffer_head *bh;
 
@@ -37,9 +56,9 @@ static int dummyfs_readblock(struct super_block *sb,
  *
  * Returns size of block written.
  */
-static int dummyfs_writeblock(struct super_block *sb,
-                            unsigned long block_index,
-                            struct dummyfs_block *block)
+int dummyfs_writeblock(struct super_block *sb,
+		       unsigned long block_index,
+		       struct dummyfs_block *block)
 {
         struct buffer_head *bh;
 
@@ -64,9 +83,9 @@ static int dummyfs_writeblock(struct super_block *sb,
  *
  * Returns the block index of the inode (including on writes).
  */
-static unsigned long dummyfs_inode_block_index(struct super_block *sb,
-		                             unsigned long ino,
-					     int writing)
+unsigned long dummyfs_inode_block_index(struct super_block *sb,
+					unsigned long ino,
+					int writing)
 {
 	struct dummyfs_inode_table table;
 	unsigned long table_num;
@@ -128,9 +147,9 @@ static unsigned long dummyfs_inode_block_index(struct super_block *sb,
  *
  * Returns the size of the block read.
  */
-static int dummyfs_read_inode(struct super_block *sb,
-                           unsigned long inum,
-                           struct dummyfs_inode *inode)
+int dummyfs_read_inode(struct super_block *sb,
+		       unsigned long inum,
+		       struct dummyfs_inode *inode)
 {
 	unsigned long inode_block_index;
 
@@ -153,9 +172,9 @@ static int dummyfs_read_inode(struct super_block *sb,
  *
  * Returns the size of the block written.
  */
-static int dummyfs_write_inode(struct super_block *sb,
-                           unsigned long inum,
-                           struct dummyfs_inode *inode)
+int dummyfs_write_inode(struct super_block *sb,
+			unsigned long inum,
+			struct dummyfs_inode *inode)
 {
 	unsigned long inode_block_index;
 
@@ -178,7 +197,7 @@ static int dummyfs_write_inode(struct super_block *sb,
  * Returns 0 if no empty blocks are found, or the index
  * of the block if found.
  */
-static unsigned long dummyfs_empty_block(struct super_block *sb)
+unsigned long dummyfs_empty_block(struct super_block *sb)
 {
 	struct dummyfs_inode_table table;
         struct dummyfs_block block;
@@ -206,7 +225,7 @@ static unsigned long dummyfs_empty_block(struct super_block *sb)
  * if no unallocated inodes are left (i.e.: every inode table is
  * full, and there's no more room to make another inode table).
  */
-static int dummyfs_empty_inode(struct super_block *sb)
+int dummyfs_empty_inode(struct super_block *sb)
 {
 	struct dummyfs_inode_table table;
 	unsigned long table_index;
@@ -336,9 +355,9 @@ struct inode *dummyfs_new_inode(const struct inode *dir, umode_t mode, unsigned 
  *
  * Returns a pointer to the data in memory.
  */
-static char *dummyfs_map_data(struct super_block *sb,
-		            struct dummyfs_inode *inode,
-		            unsigned int extra)
+char *dummyfs_map_data(struct super_block *sb,
+		       struct dummyfs_inode *inode,
+		       unsigned int extra)
 {
 	struct dummyfs_block disk_data;
 	unsigned char *mem_data = vmalloc(inode->i_size + extra);
@@ -396,9 +415,9 @@ static char *dummyfs_map_data(struct super_block *sb,
  * allocation was made, and returns 0 if the allocation
  * failed.
  */
-static unsigned long dummyfs_alloc_data(struct super_block *sb,
-		                      struct dummyfs_block *prev,
-				      unsigned long prev_index)
+unsigned long dummyfs_alloc_data(struct super_block *sb,
+				 struct dummyfs_block *prev,
+				 unsigned long prev_index)
 {
 	struct dummyfs_block new;
 	unsigned long new_index;
@@ -440,8 +459,8 @@ static unsigned long dummyfs_alloc_data(struct super_block *sb,
  * Deallocate (mark as empty) every block in a linked list
  * of data blocks for a file.
  */
-static void dummyfs_dealloc_data(struct super_block *sb,
-			       unsigned long block_index)
+void dummyfs_dealloc_data(struct super_block *sb,
+			  unsigned long block_index)
 {
 	struct dummyfs_block block;
 	unsigned long next;
@@ -479,10 +498,10 @@ static void dummyfs_dealloc_data(struct super_block *sb,
  *
  * Returns the amount of data written.
  */
-static int dummyfs_write_data(struct super_block *sb,
-		            struct dummyfs_inode *inode,
-			    unsigned char *data,
-			    unsigned long size)
+int dummyfs_write_data(struct super_block *sb,
+		       struct dummyfs_inode *inode,
+		       unsigned char *data,
+		       unsigned long size)
 {
 	struct dummyfs_block block;
 	unsigned long required;
