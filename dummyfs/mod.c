@@ -44,8 +44,8 @@ static int dummyfs_statfs(struct dentry *dentry, struct kstatfs *buf)
 
 struct file_operations dummyfs_file_operations =
 {
-	read:   dummyfs_file_read,
-	write:  dummyfs_file_write,
+	.read   = dummyfs_file_read,
+	.write  = dummyfs_file_write,
 };
 
 struct inode_operations dummyfs_file_inode_operations =
@@ -63,18 +63,18 @@ struct file_operations dummyfs_dir_operations =
 
 struct inode_operations dummyfs_dir_inode_operations =
 {
-	create: dummyfs_file_create,
-	lookup: dummyfs_lookup,
-	unlink: dummyfs_unlink,
-	mkdir: dummyfs_mkdir,
-	rmdir: dummyfs_rmdir,
-	link: dummyfs_link,
+	.create  = dummyfs_file_create,
+	.lookup  = dummyfs_lookup,
+	.unlink  = dummyfs_unlink,
+	.mkdir   = dummyfs_mkdir,
+	.rmdir   = dummyfs_rmdir,
+	.link    = dummyfs_link,
 };
 
 struct super_operations dummyfs_ops =
 {
-	statfs:     dummyfs_statfs,
-	put_super:  dummyfs_put_super,
+	.statfs     = dummyfs_statfs,
+	.put_super  = dummyfs_put_super,
 };
 
 static struct dentry *dummyfs_mount(struct file_system_type *fs_type,
