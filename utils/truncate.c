@@ -4,32 +4,36 @@
  * (based on the simplistic RAM filesystem McCreath 2001)
  */
 
-#include <stdio.h>
-#include <sys/types.h>
-#include <sys/stat.h>
 #include <fcntl.h>
+#include <stdio.h>
+#include <sys/stat.h>
+#include <sys/types.h>
 #include <unistd.h>
 
-int main(int argc, char *argv[])
+int
+main (int argc, char *argv[])
 {
-        int dfile, filesize;
+  int dfile, filesize;
 
-        if (argc != 3) {
-                printf("usage : truncate <name> <size>\n");
-                return 1;
-        }
+  if (argc != 3)
+    {
+      printf ("usage : truncate <name> <size>\n");
+      return 1;
+    }
 
-        dfile = open(argv[1],O_RDWR|O_CREAT);
+  dfile = open (argv[1], O_RDWR | O_CREAT);
 
-        if (sscanf(argv[2],"%d",&filesize) != 1) {
-                printf("Problem with number format\n");
-                return 1;
-        }
+  if (sscanf (argv[2], "%d", &filesize) != 1)
+    {
+      printf ("Problem with number format\n");
+      return 1;
+    }
 
-        if (ftruncate(dfile,filesize)) {
-                printf("Problem with ftruncate\n");
-                return 1;
-        }
+  if (ftruncate (dfile, filesize))
+    {
+      printf ("Problem with ftruncate\n");
+      return 1;
+    }
 
-        return 0;
+  return 0;
 }
