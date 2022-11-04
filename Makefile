@@ -1,6 +1,8 @@
-
+# Build everything
 all: kmod mkfs.dummyfs truncate view.dummyfs
 
+
+# Builds utils
 mkfs.dummyfs: ./utils/mkfs.dummyfs.c
 	$(CC) -Wall -o ./utils/$@ $<
 
@@ -10,6 +12,8 @@ truncate: ./utils/truncate.c
 view.dummyfs: ./utils/view.dummyfs.c
 	$(CC) -Wall -o ./utils/$@ $<
 
+
+# Build kernel module
 ifneq ($(KERNELRELEASE),)
 
 include Kbuild
@@ -23,10 +27,24 @@ kmod:
 
 endif
 
+
+# Clean everything
 clean: clean-util
 	$(MAKE) -C $(KDIR) CC=$(CC) M=$(PWD) clean
 
+
+# Clean utils
 clean-util:
 	rm -f utils/mkfs.dummyfs
 	rm -f utils/truncate
 	rm -f utils/view.dummyfs
+
+
+# Check formatting
+check-format:
+	./scripts/format-checker.sh dummyfs/block.c
+	./scripts/format-checker.sh dummyfs/block.h
+	./scripts/format-checker.sh dummyfs/inode.c
+	./scripts/format-checker.sh dummyfs/inode.h
+	./scripts/format-checker.sh dummyfs/mod.c
+	./scripts/format-checker.sh dummyfs/mod.h
