@@ -48,6 +48,8 @@ check-format:
 	./scripts/format-checker.sh dummyfs/inode.h
 	./scripts/format-checker.sh dummyfs/mod.c
 	./scripts/format-checker.sh dummyfs/mod.h
+	./scripts/format-checker.sh dummyfs/logging.c
+	./scripts/format-checker.sh dummyfs/logging.h
 	./scripts/format-checker.sh utils/mkfs.dummyfs.c
 	./scripts/format-checker.sh utils/truncate.c
 	./scripts/format-checker.sh utils/view.dummyfs.c

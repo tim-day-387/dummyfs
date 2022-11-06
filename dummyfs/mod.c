@@ -23,13 +23,14 @@
 
 #include "block.h"
 #include "inode.h"
+#include "logging.h"
 #include "mod.h"
 
 static void
 dummyfs_put_super (struct super_block *sb)
 {
   if (DEBUG)
-    printk ("dummyfs - put_super\n");
+    log_info ("put_super");
   return;
 }
 
@@ -37,7 +38,7 @@ static int
 dummyfs_statfs (struct dentry *dentry, struct kstatfs *buf)
 {
   if (DEBUG)
-    printk ("dummyfs - statfs\n");
+    log_info ("statfs");
 
   buf->f_namelen = MAX_NAME_SIZE;
   return 0;
@@ -91,14 +92,14 @@ struct file_system_type dummyfs_type = {
 static int __init
 dummyfs_init (void)
 {
-  printk ("Registering dummyfs\n");
+  log_info ("registering dummyfs");
   return register_filesystem (&dummyfs_type);
 }
 
 static void __exit
 dummyfs_exit (void)
 {
-  printk ("Unregistering the dummyfs.\n");
+  log_info ("unregistering dummyfs");
   unregister_filesystem (&dummyfs_type);
 }
 
