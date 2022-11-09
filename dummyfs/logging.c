@@ -21,21 +21,45 @@
 
 #include "logging.h"
 
+static void log_error (char *error_msg);
+
+static const char title[] = "dummyfs: ";
+static const char newline[] = "\n";
+
 int
 log_info (char *string, ...)
 {
-  va_list valist;
   char log_msg[MAX_LOG_LENGTH] = "";
+  int log_len = strlen (title) + strlen (string) + strlen (newline);
 
-  va_start (valist, string);
+  if (log_len >= MAX_LOG_LENGTH)
+    {
+      log_error ("log message too long");
 
-  strcat (log_msg, "dummyfs: ");
-  strcat (log_msg, string);
-  strcat (log_msg, "\n");
+      return 0;
+    }
+  else
+    {
+      va_list valist;
 
-  printk (log_msg, valist);
+      va_start (valist, string);
 
-  va_end (valist);
+      strcat (log_msg, title);
+      strcat (log_msg, string);
+      strcat (log_msg, newline);
 
-  return 0;
+      printk (log_msg, valist);
+
+      va_end (valist);
+
+      return 0;
+    }
+}
+
+static void
+log_error (char *error_msg)
+{
+  const char log_error_title[] = "log_error: ";
+
+  printk ("%s%s%s%s", title, log_error_title, error_msg, newline);
 }
