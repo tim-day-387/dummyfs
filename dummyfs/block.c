@@ -81,8 +81,8 @@ dummyfs_inode_block_index (struct super_block *sb, unsigned long ino,
   long long entry;
 
   if (DEBUG)
-    log_info ("%s inode %lu block index",
-            ((writing) ? "writing" : "getting"), ino);
+    log_info ("%s inode %lu block index", ((writing) ? "writing" : "getting"),
+              ino);
 
   /*
    * If the inode number is larger than the maximum index of an
@@ -101,8 +101,7 @@ dummyfs_inode_block_index (struct super_block *sb, unsigned long ino,
     entry = ino;
 
   if (DEBUG)
-    log_info ("ino %lu is at table %lu at entry %lld", ino, table_num,
-            entry);
+    log_info ("ino %lu is at table %lu at entry %lld", ino, table_num, entry);
 
   // Follow the linked list of inode tables
   dummyfs_readblock (sb, TABLE_BLOCK_INDEX, (struct dummyfs_block *)&table);
@@ -122,8 +121,8 @@ dummyfs_inode_block_index (struct super_block *sb, unsigned long ino,
     }
 
   if (DEBUG)
-    log_info ("done %s inode %lu index",
-            ((writing) ? "writing" : "getting"), ino);
+    log_info ("done %s inode %lu index", ((writing) ? "writing" : "getting"),
+              ino);
 
   return inode_index;
 }
@@ -368,7 +367,7 @@ dummyfs_map_data (struct super_block *sb, struct dummyfs_inode *inode,
 
   if (DEBUG)
     log_info ("mapping %u+%u data from inode %u", inode->i_size, extra,
-            inode->i_ino);
+              inode->i_ino);
 
   // Copy the inode's inline data
   memcpy (pos, inode->i_data,
@@ -475,8 +474,7 @@ dummyfs_dealloc_data (struct super_block *sb, unsigned long block_index)
   int k;
 
   if (DEBUG)
-    log_info ("deallocating data blocks, starting with %lu",
-            block_index);
+    log_info ("deallocating data blocks, starting with %lu", block_index);
 
   /*
    * Traverse the linked list of data blocks, zeroing
@@ -528,8 +526,7 @@ dummyfs_write_data (struct super_block *sb, struct dummyfs_inode *inode,
                  ? DIV_ROUND_UP (remainder_size, MAX_BLOCK_DATA_SIZE)
                  : 0;
   if (DEBUG)
-    log_info ("data write needs %lu blocks after inode block",
-            required);
+    log_info ("data write needs %lu blocks after inode block", required);
 
   /*
    * Allocate the extra blocks we need.
