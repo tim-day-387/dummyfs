@@ -4,22 +4,8 @@
  * (based on the simplistic RAM filesystem McCreath 2001)
  */
 
-#include <asm/uaccess.h>
 #include <linux/blkdev.h>
 #include <linux/buffer_head.h>
-#include <linux/cred.h>
-#include <linux/errno.h>
-#include <linux/fs.h>
-#include <linux/init.h>
-#include <linux/kernel.h>
-#include <linux/mm.h>
-#include <linux/module.h>
-#include <linux/proc_fs.h>
-#include <linux/slab.h>
-#include <linux/statfs.h>
-#include <linux/types.h>
-#include <linux/version.h>
-#include <linux/vmalloc.h>
 
 #include "block.h"
 #include "mod.h"
