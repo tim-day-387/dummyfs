@@ -8,6 +8,7 @@
 #include <linux/buffer_head.h>
 
 #include "block.h"
+#include "logging.h"
 #include "mod.h"
 
 /*
@@ -22,7 +23,7 @@ dummyfs_readblock (struct super_block *sb, unsigned long block_index,
   struct buffer_head *bh;
 
   if (DEBUG)
-    printk ("dummyfs - readblock : %lu\n", block_index);
+    log_info ("readblock : %lu", block_index);
 
   bh = sb_bread (sb,
                  block_index); // Move to the correct position on the device
@@ -31,7 +32,7 @@ dummyfs_readblock (struct super_block *sb, unsigned long block_index,
   brelse (bh);
 
   if (DEBUG)
-    printk ("dummyfs - readblock done : %lu\n", block_index);
+    log_info ("readblock done : %lu", block_index);
 
   return BLOCKSIZE;
 }
@@ -48,7 +49,7 @@ dummyfs_writeblock (struct super_block *sb, unsigned long block_index,
   struct buffer_head *bh;
 
   if (DEBUG)
-    printk ("dummyfs - writeblock : %lu\n", block_index);
+    log_info ("writeblock : %lu", block_index);
 
   bh = sb_bread (sb,
                  block_index); // Move to the correct position on the device
@@ -58,7 +59,7 @@ dummyfs_writeblock (struct super_block *sb, unsigned long block_index,
   brelse (bh);
 
   if (DEBUG)
-    printk ("dummyfs - writeblock done: %lu\n", block_index);
+    log_info ("writeblock done: %lu", block_index);
 
   return BLOCKSIZE;
 }
@@ -80,7 +81,7 @@ dummyfs_inode_block_index (struct super_block *sb, unsigned long ino,
   long long entry;
 
   if (DEBUG)
-    printk ("dummyfs - %s inode %lu block index",
+    log_info ("%s inode %lu block index",
             ((writing) ? "writing" : "getting"), ino);
 
   /*
@@ -100,7 +101,7 @@ dummyfs_inode_block_index (struct super_block *sb, unsigned long ino,
     entry = ino;
 
   if (DEBUG)
-    printk ("dummyfs - ino %lu is at table %lu at entry %lld", ino, table_num,
+    log_info ("ino %lu is at table %lu at entry %lld", ino, table_num,
             entry);
 
   // Follow the linked list of inode tables
@@ -121,7 +122,7 @@ dummyfs_inode_block_index (struct super_block *sb, unsigned long ino,
     }
 
   if (DEBUG)
-    printk ("dummyfs - done %s inode %lu index",
+    log_info ("done %s inode %lu index",
             ((writing) ? "writing" : "getting"), ino);
 
   return inode_index;
@@ -141,13 +142,13 @@ dummyfs_read_inode (struct super_block *sb, unsigned long inum,
   unsigned long inode_block_index;
 
   if (DEBUG)
-    printk ("dummyfs - reading inode %lu\n", inum);
+    log_info ("reading inode %lu", inum);
 
   inode_block_index = dummyfs_inode_block_index (sb, inum, false);
   dummyfs_readblock (sb, inode_block_index, (struct dummyfs_block *)inode);
 
   if (DEBUG)
-    printk ("dummyfs - done reading inode %lu\n", inum);
+    log_info ("done reading inode %lu", inum);
 
   return BLOCKSIZE;
 }
@@ -166,13 +167,13 @@ dummyfs_write_inode (struct super_block *sb, unsigned long inum,
   unsigned long inode_block_index;
 
   if (DEBUG)
-    printk ("dummyfs - writing inode %lu\n", inum);
+    log_info ("writing inode %lu", inum);
 
   inode_block_index = dummyfs_inode_block_index (sb, inum, false);
   dummyfs_writeblock (sb, inode_block_index, (struct dummyfs_block *)inode);
 
   if (DEBUG)
-    printk ("dummyfs - done writing inode %lu\n", inum);
+    log_info ("done writing inode %lu", inum);
 
   return BLOCKSIZE;
 }
@@ -223,7 +224,7 @@ dummyfs_empty_inode (struct super_block *sb)
   int k;
 
   if (DEBUG)
-    printk ("dummyfs - finding an empty inode");
+    log_info ("finding an empty inode");
 
   // Traverse the linked list of inode tables to spot an unallocated entry
   table_index = TABLE_BLOCK_INDEX;
@@ -232,11 +233,11 @@ dummyfs_empty_inode (struct super_block *sb)
     {
       for (k = 0; k < MAX_TABLE_SIZE; k++)
         { // Search through a table
-          printk ("dummyfs - table[%d] is %u", k, table.t_table[k]);
+          log_info ("table[%d] is %u", k, table.t_table[k]);
           if (BM_IS_UNALLOCATED (table.t_table[k]))
             {
               if (DEBUG)
-                printk ("dummyfs - done empty inode");
+                log_info ("done empty inode");
               return k + (table_num * MAX_TABLE_SIZE);
             }
         }
@@ -254,11 +255,11 @@ dummyfs_empty_inode (struct super_block *sb)
 
   // If we get to here, we need to make a new inode table
   if (DEBUG)
-    printk ("dummyfs - creating a new inode table");
+    log_info ("creating a new inode table");
   new_table_index = dummyfs_empty_block (sb); // Get a new empty block
   if (!new_table_index)
     {
-      printk ("dummyfs - no free blocks to allocate a new table!");
+      log_info ("no free blocks to allocate a new table!");
       return 0;
     }
   table.b_next
@@ -273,7 +274,7 @@ dummyfs_empty_inode (struct super_block *sb)
   table_num++;
 
   if (DEBUG)
-    printk ("dummyfs - done finding empty inode");
+    log_info ("done finding empty inode");
 
   return (table_num * MAX_TABLE_SIZE);
 }
@@ -293,7 +294,7 @@ dummyfs_new_inode (const struct inode *dir, umode_t mode,
   int k;
 
   if (DEBUG)
-    printk ("dummyfs - new inode\n");
+    log_info ("new inode");
 
   if (!dir)
     return NULL;
@@ -308,7 +309,7 @@ dummyfs_new_inode (const struct inode *dir, umode_t mode,
   new_inode_number = dummyfs_empty_inode (sb);
   if (new_inode_number == 0)
     {
-      printk ("dummyfs - inode table is full\n");
+      log_info ("inode table is full");
       return NULL;
     }
 
@@ -316,7 +317,7 @@ dummyfs_new_inode (const struct inode *dir, umode_t mode,
   block_index = dummyfs_empty_block (sb);
   if (block_index == 0)
     {
-      printk ("dummyfs - no empty blocks left\n");
+      log_info ("no empty blocks left");
       return NULL;
     }
 
@@ -345,7 +346,7 @@ dummyfs_new_inode (const struct inode *dir, umode_t mode,
   insert_inode_hash (inode);
 
   if (DEBUG)
-    printk ("dummyfs - done new inode");
+    log_info ("done new inode");
 
   return inode;
 }
@@ -366,7 +367,7 @@ dummyfs_map_data (struct super_block *sb, struct dummyfs_inode *inode,
   unsigned char *pos = mem_data;
 
   if (DEBUG)
-    printk ("dummyfs - mapping %u+%u data from inode %u", inode->i_size, extra,
+    log_info ("mapping %u+%u data from inode %u", inode->i_size, extra,
             inode->i_ino);
 
   // Copy the inode's inline data
@@ -386,15 +387,14 @@ dummyfs_map_data (struct super_block *sb, struct dummyfs_inode *inode,
     { // If the inline data is all there was...
       if (DEBUG)
         {
-          printk ("dummyfs - inode had no extra data blocks");
-          printk ("dummyfs - done map data");
+          log_info ("inode had no extra data blocks, done map data");
         }
       return mem_data;
     }
   else
     {
       if (DEBUG)
-        printk ("dummyfs - inode has extra data blocks");
+        log_info ("inode has extra data blocks");
       dummyfs_readblock (sb, inode->b_next, &disk_data);
       while (true)
         { // Traverse the linked list
@@ -406,7 +406,7 @@ dummyfs_map_data (struct super_block *sb, struct dummyfs_inode *inode,
             break;
         }
       if (DEBUG)
-        printk ("dummyfs - done map data");
+        log_info ("done map data");
       return mem_data;
     }
 }
@@ -428,14 +428,14 @@ dummyfs_alloc_data (struct super_block *sb, struct dummyfs_block *prev,
   int k;
 
   if (DEBUG)
-    printk ("dummyfs - allocating new data block\n");
+    log_info ("allocating new data block");
 
   // Check to see if our work is already done
   if (!BM_IS_UNALLOCATED (prev->b_next))
     {
-      printk ("dummyfs - current block already has a successor!\n");
+      log_info ("current block already has a successor!");
       if (DEBUG)
-        printk ("dummyfs - done allocation\n");
+        log_info ("done allocation");
       return prev->b_next;
     }
 
@@ -443,7 +443,7 @@ dummyfs_alloc_data (struct super_block *sb, struct dummyfs_block *prev,
   new_index = dummyfs_empty_block (sb);
   if (new_index == 0)
     { // Report failures
-      printk ("dummyfs - no empty blocks left!\n");
+      log_info ("no empty blocks left!");
     }
   else
     {
@@ -459,7 +459,7 @@ dummyfs_alloc_data (struct super_block *sb, struct dummyfs_block *prev,
     }
 
   if (DEBUG)
-    printk ("dummyfs - done allocation\n");
+    log_info ("done allocation");
   return new_index;
 }
 
@@ -475,7 +475,7 @@ dummyfs_dealloc_data (struct super_block *sb, unsigned long block_index)
   int k;
 
   if (DEBUG)
-    printk ("dummyfs - deallocating data blocks, starting with %lu",
+    log_info ("deallocating data blocks, starting with %lu",
             block_index);
 
   /*
@@ -498,7 +498,7 @@ dummyfs_dealloc_data (struct super_block *sb, unsigned long block_index)
     }
 
   if (DEBUG)
-    printk ("dummyfs - done deallocating data blocks");
+    log_info ("done deallocating data blocks");
 }
 
 /*
@@ -520,7 +520,7 @@ dummyfs_write_data (struct super_block *sb, struct dummyfs_inode *inode,
   unsigned char *pos = data;
 
   if (DEBUG)
-    printk ("dummyfs - writing data (%lu bytes)", size);
+    log_info ("writing data (%lu bytes)", size);
 
   // Calculate how many blocks we'll need beyond the inode's inline data
   remainder_size = ((signed long long)size) - MAX_INODE_DATA_SIZE;
@@ -528,7 +528,7 @@ dummyfs_write_data (struct super_block *sb, struct dummyfs_inode *inode,
                  ? DIV_ROUND_UP (remainder_size, MAX_BLOCK_DATA_SIZE)
                  : 0;
   if (DEBUG)
-    printk ("dummyfs - data write needs %lu blocks after inode block",
+    log_info ("data write needs %lu blocks after inode block",
             required);
 
   /*
@@ -545,7 +545,7 @@ dummyfs_write_data (struct super_block *sb, struct dummyfs_inode *inode,
       if (block_index == 0)
         { // If there are no more empty blocks, truncate the data
           // by marking the eof as earlier than it actually is.
-          printk ("dummyfs - will only write what I can fit");
+          log_info ("will only write what I can fit");
           eof = data + MAX_INODE_DATA_SIZE;
           required = 0;
         }
@@ -560,7 +560,7 @@ dummyfs_write_data (struct super_block *sb, struct dummyfs_inode *inode,
           block_index = dummyfs_alloc_data (sb, &block, block_index);
           if (block_index == 0)
             {
-              printk ("dummyfs - will only write what I can fit");
+              log_info ("will only write what I can fit");
               eof = pos + MAX_BLOCK_DATA_SIZE;
               required = 0;
             }
@@ -575,7 +575,7 @@ dummyfs_write_data (struct super_block *sb, struct dummyfs_inode *inode,
 
   // Time to write to disk!
   if (DEBUG)
-    printk ("dummyfs - beginning writes to disk");
+    log_info ("beginning writes to disk");
 
   // Reset all the pointers to be back to the start (we adjusted them
   // in case we needed to truncate data in the above allocation loop)
@@ -612,7 +612,7 @@ dummyfs_write_data (struct super_block *sb, struct dummyfs_inode *inode,
     }
 
   if (DEBUG)
-    printk ("dummyfs - done write data");
+    log_info ("done write data");
 
   return pos - data;
 }
