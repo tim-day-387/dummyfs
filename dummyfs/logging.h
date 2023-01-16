@@ -7,6 +7,6 @@
 
 #define MAX_LOG_LENGTH 120
 
-int log_info (char *, ...);
+int log_info (char *, char *, ...);
 
 #endif

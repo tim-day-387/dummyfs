@@ -13,17 +13,19 @@
 #include "logging.h"
 #include "mod.h"
 
+#define FNM "mod"
+
 static void
 dummyfs_put_super (struct super_block *sb)
 {
-  log_info ("put_super");
+  log_info (FNM, "put_super");
   return;
 }
 
 static int
 dummyfs_statfs (struct dentry *dentry, struct kstatfs *buf)
 {
-  log_info ("statfs");
+  log_info (FNM, "statfs");
 
   buf->f_namelen = MAX_NAME_SIZE;
   return 0;
@@ -77,14 +79,14 @@ struct file_system_type dummyfs_type = {
 static int __init
 dummyfs_init (void)
 {
-  log_info ("registering dummyfs");
+  log_info (FNM, "registering dummyfs");
   return register_filesystem (&dummyfs_type);
 }
 
 static void __exit
 dummyfs_exit (void)
 {
-  log_info ("unregistering dummyfs");
+  log_info (FNM, "unregistering dummyfs");
   unregister_filesystem (&dummyfs_type);
 }
 
