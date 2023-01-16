@@ -23,6 +23,10 @@ mk_clean_fs() {
 mk_dir_and_mount() {
   mkdir testmountpoint
   sudo mount -o loop -t $KMOD_NAME test.img testmountpoint
+
+  mkdir debugmountpoint
+  sudo mount -t dumdbfs none debugmountpoint
+
   cd testmountpoint
 }
 
@@ -41,6 +45,19 @@ write_read_files() {
   ls
   rm file1
   ls
+}
+
+
+test_dumdbfs() {
+  echo "start - test dumdbfs"
+  cat $ROOT_DIR/debugmountpoint/counter
+  cat $ROOT_DIR/debugmountpoint/counter
+  cat $ROOT_DIR/debugmountpoint/counter
+  echo 0 | sudo tee $ROOT_DIR/debugmountpoint/counter
+  cat $ROOT_DIR/debugmountpoint/counter
+  cat $ROOT_DIR/debugmountpoint/counter
+  cat $ROOT_DIR/debugmountpoint/counter
+  echo "end - test dumdbfs"
 }
 
 
@@ -65,6 +82,7 @@ truncate_files() {
 umount_dir() {
   cd $ROOT_DIR
   sudo umount testmountpoint
+  sudo umount debugmountpoint
 }
 
 
@@ -76,6 +94,7 @@ remove_kmod() {
 clean() {
   rm test.img
   rm -rf testmountpoint
+  rm -rf debugmountpoint
 }
 
 
@@ -91,6 +110,7 @@ else
   mk_clean_fs
   mk_dir_and_mount
   write_read_files
+  test_dumdbfs
   umount_dir
   remove_kmod
   clean

@@ -53,6 +53,9 @@
 #define true 1
 #define false 0
 
+#define DUMDBFS_MAGIC 0x19920342
+#define TMPSIZE 20
+
 #include <linux/types.h>
 
 struct dummyfs_block
