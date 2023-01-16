@@ -142,7 +142,7 @@ dumdbfs_write_file (struct file *filp, const char *buf, size_t count,
   if (copy_from_user (tmp, buf, count))
     return -EFAULT;
 
-  log_info (FNM, "%s\n", tmp);
+  log_info (FNM, "%s", tmp);
 
   atomic_set (counter, simple_strtol (tmp, NULL, 10));
   return count;
