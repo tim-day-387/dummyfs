@@ -16,16 +16,14 @@
 static void
 dummyfs_put_super (struct super_block *sb)
 {
-  if (DEBUG)
-    log_info ("put_super");
+  log_info ("put_super");
   return;
 }
 
 static int
 dummyfs_statfs (struct dentry *dentry, struct kstatfs *buf)
 {
-  if (DEBUG)
-    log_info ("statfs");
+  log_info ("statfs");
 
   buf->f_namelen = MAX_NAME_SIZE;
   return 0;

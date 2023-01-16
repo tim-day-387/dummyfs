@@ -53,8 +53,6 @@
 #define true 1
 #define false 0
 
-#define DEBUG 1
-
 #include <linux/types.h>
 
 struct dummyfs_block

@@ -28,8 +28,7 @@ dummyfs_create (struct inode *dir, struct dentry *dentry, umode_t mode,
   struct inode *inode;
   unsigned char *listings;
 
-  if (DEBUG)
-    log_info ("create -> %s", dentry->d_name.name);
+  log_info ("create -> %s", dentry->d_name.name);
 
   // Establish a default 644 mode if one wasn't given
   if (!mode)
@@ -120,8 +119,7 @@ dummyfs_file_write (struct file *filp, const char *buf, size_t count,
   unsigned long extra;
   struct super_block *sb;
 
-  if (DEBUG)
-    log_info ("file write, count -> %zu, ppos -> %Ld", count, *ppos);
+  log_info ("file write, count -> %zu, ppos -> %Ld", count, *ppos);
 
   /*
    * These error checks ensure no shenanigans (writing beyond the end/beginning
@@ -178,8 +176,7 @@ dummyfs_file_write (struct file *filp, const char *buf, size_t count,
 
   vfree (data); // Free the data from memory
 
-  if (DEBUG)
-    log_info ("file write, done -> %zu, ppos -> %Ld", count, *ppos);
+  log_info ("file write, done -> %zu, ppos -> %Ld", count, *ppos);
 
   return count;
 }
@@ -199,8 +196,7 @@ dummyfs_file_read (struct file *filp, char *buf, size_t count, loff_t *ppos)
   ssize_t offset, size;
   struct super_block *sb;
 
-  if (DEBUG)
-    log_info ("file read, count -> %zu, ppos -> %Ld", count, *ppos);
+  log_info ("file read, count -> %zu, ppos -> %Ld", count, *ppos);
 
   /*
    * These error checks ensure no shenanigans (reading beyond the end/beginning
@@ -236,9 +232,8 @@ dummyfs_file_read (struct file *filp, char *buf, size_t count, loff_t *ppos)
   offset = *ppos;
   *ppos += size;
 
-  if (DEBUG)
-    log_info ("copying bytes to userspace -> %u, size -> %ld",
-              file_data.i_size, size);
+  log_info ("copying bytes to userspace -> %u, size -> %ld", file_data.i_size,
+            size);
 
   // Copy the data from memory to userspace
   if (copy_to_user (buf, data + offset, size))
@@ -268,8 +263,7 @@ dummyfs_unlink (struct inode *dir, struct dentry *dentry)
   unsigned char *listings;
   struct dummyfs_dir_listing *listing, *last_listing;
 
-  if (DEBUG)
-    log_info ("unlink -> %s", dentry->d_name.name);
+  log_info ("unlink -> %s", dentry->d_name.name);
 
   // Retrieve the parent directory's inode metadata and listings
   dummyfs_read_inode (dir->i_sb, dir->i_ino, &dir_data);
@@ -337,8 +331,7 @@ dummyfs_unlink (struct inode *dir, struct dentry *dentry)
   // Remove inode and data blocks from superblock if the last link is gone
   if (inode->i_nlink == 1)
     {
-      if (DEBUG)
-        log_info ("inode has no links left, emptying out inode on disk");
+      log_info ("inode has no links left, emptying out inode on disk");
       file_data_index = dummyfs_inode_block_index (
           dir->i_sb, inode->i_ino,
           BM_UNALLOCATED); // Remove the inode table entry
@@ -370,8 +363,7 @@ dummyfs_rmdir (struct inode *dir, struct dentry *dentry)
   struct inode *del = dentry->d_inode;
   int num_dirs;
 
-  if (DEBUG)
-    log_info ("rmdir -> %s", dentry->d_name.name);
+  log_info ("rmdir -> %s", dentry->d_name.name);
 
   dummyfs_read_inode (dir->i_sb, del->i_ino, &dir_data);
   num_dirs = dir_data.i_size / sizeof (struct dummyfs_dir_listing);
@@ -382,13 +374,11 @@ dummyfs_rmdir (struct inode *dir, struct dentry *dentry)
   else
     {
       log_info ("cannot unlink directory with files -> %d", num_dirs);
-      if (DEBUG)
-        log_info ("done rmdir");
+      log_info ("done rmdir");
       return -ENOTEMPTY;
     }
 
-  if (DEBUG)
-    log_info ("done rmdir");
+  log_info ("done rmdir");
   return 0;
 }
 
@@ -408,8 +398,7 @@ dummyfs_readdir (struct file *filp, struct dir_context *ctx)
       *listing; // Points to the current name/inode pair (dentry)
   int error, k;
 
-  if (DEBUG)
-    log_info ("readdir");
+  log_info ("readdir");
 
   // Map the directory's listings into memory
   inode = file_inode (filp);
@@ -417,9 +406,7 @@ dummyfs_readdir (struct file *filp, struct dir_context *ctx)
   num_listings = dir_data.i_size / sizeof (struct dummyfs_dir_listing);
   listings = dummyfs_map_data (inode->i_sb, &dir_data, 0);
 
-  if (DEBUG)
-    log_info ("number of entries -> %d, fpos -> %Ld", num_listings,
-              filp->f_pos);
+  log_info ("number of entries -> %d, fpos -> %Ld", num_listings, filp->f_pos);
 
   // Loop through each listing and emit it
   error = 0;
@@ -466,8 +453,7 @@ dummyfs_link (struct dentry *old_dentry, struct inode *dir,
   struct inode *inode;
   unsigned char *listings;
 
-  if (DEBUG)
-    log_info ("link -> %s", dentry->d_name.name);
+  log_info ("link -> %s", dentry->d_name.name);
 
   // Get the existing inode
   inode = d_inode (old_dentry);
@@ -534,8 +520,7 @@ dummyfs_lookup (struct inode *dir, struct dentry *dentry, unsigned int flags)
   unsigned char *listings;
   struct dummyfs_dir_listing *listing;
 
-  if (DEBUG)
-    log_info ("lookup in dir with ino -> %lu", dir->i_ino);
+  log_info ("lookup in dir with ino -> %lu", dir->i_ino);
 
   // Map the directory's listings to memory
   dummyfs_read_inode (dir->i_sb, dir->i_ino, &dir_data);
@@ -570,8 +555,7 @@ dummyfs_lookup (struct inode *dir, struct dentry *dentry, unsigned int flags)
   d_add (dentry, inode);
   vfree (listings); // Free the listings from memory
 
-  if (DEBUG)
-    log_info ("done lookup");
+  log_info ("done lookup");
 
   return NULL;
 }
@@ -612,11 +596,8 @@ dummyfs_iget (struct super_block *sb, unsigned long ino)
   struct inode *inode;
   struct dummyfs_inode v_inode;
 
-  if (DEBUG)
-    {
-      log_info ("iget, ino -> %lu", ino);
-      log_info ("iget, super -> %p", sb);
-    }
+  log_info ("iget, ino -> %lu", ino);
+  log_info ("iget, super -> %p", sb);
 
   inode = iget_locked (sb, ino);
   if (!inode)
@@ -667,8 +648,7 @@ dummyfs_fill_super (struct super_block *s, void *data, int silent)
   int hblock;
   // int *numblocks = malloc(sizeof(int));
 
-  if (DEBUG)
-    log_info ("fill super");
+  log_info ("fill super");
 
 #if LINUX_VERSION_CODE < KERNEL_VERSION(5, 0, 0)
   s->s_flags = MS_NOSUID | MS_NOEXEC;
